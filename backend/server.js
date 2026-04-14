@@ -12,7 +12,7 @@ app.use(express.json());
 
 // Import routes
 const userRoutes = require("./routes/userRoutes");
-const notificationRoutes = require("./routes/notificationRoutes");
+
 
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI)
@@ -21,7 +21,7 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Use routes
 app.use("/api/users", userRoutes);
-app.use("/api/notifications", notificationRoutes);
+
 
 app.get("/", (req, res) => {
   res.send("API running");
