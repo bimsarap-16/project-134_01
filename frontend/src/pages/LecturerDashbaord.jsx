@@ -41,6 +41,82 @@ const Icons = {
 
 const accent = "#3b82f6";
 
+const AddPracticeQuiz = ({ toast, modules }) => {
+    const [form, setForm] = useState({ moduleId: "", title: "", duration: "" });
+    const [questions, setQuestions] = useState([newQuestion()]);
+    const [loading, setLoading] = useState(false);
+
+    const updateQ = (i, q) => setQuestions(qs => qs.map((x, xi) => xi === i ? q : x));
+    const removeQ = (i) => setQuestions(qs => qs.filter((_, xi) => xi !== i));
+    const addQ = () => setQuestions(qs => [...qs, newQuestion()]);
+
+    const validate = () => {
+        if (!form.moduleId || !form.title || !form.duration) { toast("Please fill all required fields.", "error"); return false; }
+        if (parseInt(form.duration) <= 0) { toast("Duration must be a positive number.", "error"); return false; }
+        if (questions.some(q => !q.questionText.trim())) { toast("All questions must have text.", "error"); return false; }
+        return true;
+    };
+
+    const handlePublish = async () => {
+        if (!validate()) return;
+        setLoading(true);
+        try {
+            const res = await quizAPI.create({ ...form, quizType: "practice" });
+            const quizId = res.data.data._id;
+            // Sequential for simplicity or Promise.all
+            for (const q of questions) {
+                await questionAPI.create({ ...q, quizId });
+            }
+            toast("Practice quiz published successfully!");
+            setForm({ moduleId: "", title: "", duration: "" });
+            setQuestions([newQuestion()]);
+        } catch (e) {
+            toast(e.response?.data?.message || "Failed to publish quiz", "error");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div style={{ maxWidth: 860 }}>
+            <h1 style={{ margin: "0 0 8px", fontSize: 28, fontWeight: 800, color: "var(--text)", fontFamily: "'Calibri', sans-serif" }}>Add Practice Quiz</h1>
+            <p style={{ margin: "0 0 32px", color: "var(--text-muted)", fontSize: 14 }}>Create a module-based practice quiz for students.</p>
+
+            <div style={{ background: "var(--card)", borderRadius: 24, padding: 32, border: "1px solid var(--border)", marginBottom: 24 }}>
+                <h3 style={{ margin: "0 0 24px", color: "var(--text)", fontFamily: "'Calibri', sans-serif" }}>Quiz Details</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                    <FormField label="Select Module" required>
+                        <select value={form.moduleId} onChange={e => setForm(f => ({ ...f, moduleId: e.target.value }))} style={selectStyle}>
+                            <option value="">-- Choose Module --</option>
+                            {modules.map(m => <option key={m._id} value={m._id}>{m.moduleName}</option>)}
+                        </select>
+                    </FormField>
+                    <FormField label="Quiz Title" required>
+                        <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Week 4 Variables Quiz" style={inputStyle} />
+                    </FormField>
+                    <FormField label="Duration (minutes)" required>
+                        <input type="number" min="1" value={form.duration} onChange={e => setForm(f => ({ ...f, duration: e.target.value }))} placeholder="30" style={inputStyle} />
+                    </FormField>
+                </div>
+            </div>
+
+            <div style={{ background: "var(--card)", borderRadius: 24, padding: 32, border: "1px solid var(--border)", marginBottom: 24 }}>
+                <h3 style={{ margin: "0 0 24px", color: "var(--text)", fontFamily: "'Calibri', sans-serif" }}>Questions ({questions.length})</h3>
+                {questions.map((q, i) => <QuestionItem key={i} q={q} idx={i} onChange={updateQ} onRemove={removeQ} topics={modules.find(m => m._id === form.moduleId)?.topics || []} />)}
+                <button onClick={addQ} style={{ width: "100%", padding: "14px", border: "2px dashed var(--border)", borderRadius: 16, background: "transparent", color: "var(--accent)", cursor: "pointer", fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    <Icon d={Icons.plus} size={18} /> Add Another Question
+                </button>
+            </div>
+
+            <div style={{ display: "flex", gap: 12 }}>
+                <button onClick={handlePublish} disabled={loading} style={{ flex: 1, padding: "14px", borderRadius: 14, border: "none", background: "linear-gradient(135deg, var(--accent), #0891b2)", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 700 }}>
+                    {loading ? "Publishing..." : "Publish Quiz →"}
+                </button>
+            </div>
+        </div>
+    );
+};
+
  return (
         <div style={{ ...cssVars, position: "relative", minHeight: "100vh", background: "var(--bg)", color: "var(--text)", overflow: "hidden", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             <style>{`
