@@ -1,33 +1,84 @@
-const express = require("express");
-const cors = require("cors");
-const mongoose = require("mongoose");
-const dns = require("dns");
-require("dotenv").config();
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const connectDB = require('./src/config/db');
+const { httpLogger } = require('./src/utils/logger');
+const errorHandler = require('./src/middleware/errorHandler');
 
-dns.setDefaultResultOrder('ipv4first');
+// ─── Route imports ────────────────────────────────────────────────────────────
+const authRoutes = require('./src/routes/authRoutes');
+const userRoutes = require('./src/routes/userRoutes');
+
+
+
+
+
+
+
+
+
+// ─── Connect to Database ──────────────────────────────────────────────────────
+connectDB();
+const mongoose = require('mongoose');
+mongoose.set('debug', true);
 
 const app = express();
-app.use(cors());
-app.use(express.json());
 
-// Import routes
-const userRoutes = require("./routes/userRoutes");
+// ─── Body Parser ──────────────────────────────────────────────────────────────
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true }));
 
+// ─── Static Files ─────────────────────────────────────────────────────────────
+app.use('/uploads', express.static('uploads'));
 
-// MongoDB connection
-mongoose.connect(process.env.MONGO_URI)
-.then(() => console.log("MongoDB Connected"))
-.catch((err) => console.log(err));
+// ─── Middleware ───────────────────────────────────────────────────────────────
+app.use(
+    cors({
+        origin: process.env.FRONTEND_URL || '*',
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+    })
+);
 
-// Use routes
-app.use("/api/users", userRoutes);
+// ─── HTTP Logging (Disabled) ──────────────────────────────────────────────────
+// app.use(httpLogger);
 
-
-app.get("/", (req, res) => {
-  res.send("API running");
+// ─── Health Check ─────────────────────────────────────────────────────────────
+app.get('/api/health', (req, res, next) => {
+    res.status(200).json({
+        success: true,
+        message: 'QuizBank API is running 🚀',
+        data: { timestamp: new Date().toISOString(), env: process.env.NODE_ENV },
+    });
 });
 
+// ─── API Routes ───────────────────────────────────────────────────────────────
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+
+
+// ─── 404 Handler ──────────────────────────────────────────────────────────────
+app.use((req, res, next) => {
+    res.status(404).json({
+        success: false,
+        message: `Route ${req.method} ${req.originalUrl} not found.`,
+        data: null,
+    });
+});
+
+// ─── Centralized Error Handler ────────────────────────────────────────────────
+app.use(errorHandler);
+
+// ─── Start Server ─────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+const server = app.listen(PORT, () => {
+    console.log(`\n🚀 Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+    console.log(`📡 API Base: http://localhost:${PORT}/api`);
+    console.log(`❤️  Health: http://localhost:${PORT}/api/health\n`);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err) => {
+    console.error(`❌ Unhandled Rejection: ${err.message}`);
+    server.close(() => process.exit(1));
 });
