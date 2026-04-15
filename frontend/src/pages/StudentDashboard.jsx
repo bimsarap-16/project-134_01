@@ -29,7 +29,16 @@ const Icon = ({ name, size = 20 }) => {
     return icons[name] || null;
 };
 
-
+// ── RENDER PRACTICE ────────────────────────────────────────────────────────────
+    const renderPractice = () => {
+        if (!selectedQuiz || questions.length === 0) return (
+            <div style={{ padding: 60, textAlign: "center", color: colors.textMid }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>📚</div>
+                <div style={{ fontSize: 18, fontWeight: 600, color: colors.text }}>No questions found</div>
+                <button onClick={() => navigateTo("quizList")} style={{ marginTop: 20, padding: "12px 24px", borderRadius: 12, background: `linear-gradient(135deg,${colors.accent},#2563eb)`, border: "none", color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: "'Calibri', sans-serif" }}>Go Back</button>
+            </div>
+        );
+         };
 
 const sidebarLinks = [
         { id: "dashboard", label: "Dashboard", icon: "dashboard" },
