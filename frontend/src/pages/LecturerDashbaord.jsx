@@ -41,6 +41,13 @@ const Icons = {
 
 const accent = "#3b82f6";
 
+const AddExamQuiz = ({ toast, modules }) => {
+    const [form, setForm] = useState({ moduleId: "", title: "", duration: "", scheduledStart: "", scheduledEnd: "", attemptsAllowed: 1 });
+    const [questions, setQuestions] = useState([newQuestion()]);
+    const [modal, setModal] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+
  return (
         <div style={{ ...cssVars, position: "relative", minHeight: "100vh", background: "var(--bg)", color: "var(--text)", overflow: "hidden", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             <style>{`
