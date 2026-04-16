@@ -101,6 +101,50 @@ const getQuizById = async (req, res, next) => {
 };
 
 /**
+ * @desc    Update a quiz
+ * @route   PUT /api/quizzes/:id
+ * @access  Lecturer (owner only)
+ */
+const updateQuiz = async (req, res, next) => {
+    try {
+        const quiz = await Quiz.findById(req.params.id);
+        if (!quiz) return sendError(res, 'Quiz not found.', 404);
+
+        if (quiz.createdBy.toString() !== req.user._id.toString()) {
+            return sendError(res, 'Not authorized to update this quiz.', 403);
+        }
+
+        if (req.body.quizType === 'exam' || (quiz.quizType === 'exam' && (req.body.scheduledStart || req.body.scheduledEnd))) {
+            const newStart = req.body.scheduledStart ? new Date(req.body.scheduledStart) : quiz.scheduledStart;
+            const newEnd = req.body.scheduledEnd ? new Date(req.body.scheduledEnd) : quiz.scheduledEnd;
+
+            const overlap = await Quiz.findOne({
+                quizType: 'exam',
+                moduleId: quiz.moduleId,
+                _id: { $ne: quiz._id },
+                $or: [
+                    {
+                        scheduledStart: { $lt: newEnd },
+                        scheduledEnd: { $gt: newStart }
+                    }
+                ]
+            });
+
+            if (overlap) {
+                return sendError(res, `This time slot already has an exam scheduled for this module: "${overlap.title}"`, 400);
+            }
+        }
+
+        Object.assign(quiz, req.body);
+        await quiz.save();
+
+        return sendSuccess(res, quiz, 'Quiz updated successfully.');
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
  * @desc    Get all quizzes (paginated, supports filtering by type)
  * @route   GET /api/quizzes
  * @access  All authenticated users
@@ -121,4 +165,4 @@ const getAllQuizzes = async (req, res, next) => {
     }
 };
 
-module.exports = { createQuiz, getQuizzesByModule, getQuizById, getAllQuizzes };
+module.exports = { createQuiz, getQuizzesByModule, getQuizById, updateQuiz, getAllQuizzes };
