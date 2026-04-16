@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Module = require('../models/Module');
 const { sendSuccess, sendError } = require('../utils/response');
 const { sendEmail } = require('../utils/mail');
+const paginate = require('../utils/paginate');
 
 /**
  * @desc    Create a quiz
@@ -43,51 +44,7 @@ const createQuiz = async (req, res, next) => {
                 const scheduledTime = new Date(quiz.scheduledStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                 const emailPromises = students.map(student =>
-                    sendEmail(
-                        student.email,
-                        `New Exam Published: ${quiz.title}`,
-                        `
-                            <div style="font-family: 'Calibri', sans-serif; padding: 25px; border: 1px solid #e2e8f0; border-radius: 16px; max-width: 600px; color: #1e293b;">
-                                <h2 style="color: #6366f1; margin-top: 0;">New Exam Scheduled</h2>
-                                <p>Hi <b>${student.name}</b>,</p>
-                                <p>A new exam has been scheduled for your module.</p>
-
-                                <div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0; border: 1px solid #f1f5f9;">
-                                    <table style="width: 100%; border-collapse: collapse;">
-                                        <tr>
-                                            <td style="padding: 8px 0; color: #64748b; font-size: 14px; width: 120px;">Module:</td>
-                                            <td style="padding: 8px 0; color: #0f172a; font-weight: 600;">${module ? module.moduleName : 'N/A'}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Lecturer:</td>
-                                            <td style="padding: 8px 0; color: #0f172a; font-weight: 600;">${lecturer.name}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Exam Topic:</td>
-                                            <td style="padding: 8px 0; color: #0f172a; font-weight: 600;">${quiz.title}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Date:</td>
-                                            <td style="padding: 8px 0; color: #0f172a; font-weight: 600;">${scheduledDate}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Time:</td>
-                                            <td style="padding: 8px 0; color: #0f172a; font-weight: 600;">${scheduledTime}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Duration:</td>
-                                            <td style="padding: 8px 0; color: #0f172a; font-weight: 600;">${quiz.duration} Minutes</td>
-                                        </tr>
-                                    </table>
-                                </div>
-
-                                <p>Please ensure you are ready at the scheduled time. Good luck!</p>
-                                <p style="color: #64748b; font-size: 13px; margin-top: 25px; border-top: 1px solid #f1f5f9; padding-top: 15px;">
-                                    This is an automated notification from QuizHub Academic System.
-                                </p>
-                            </div>
-                        `
-                    )
+                    sendEmail(student.email, `New Exam Published: ${quiz.title}`, `<p>Exam scheduled for ${module ? module.moduleName : 'N/A'}</p>`)
                 );
 
                 Promise.all(emailPromises).catch(err => console.error('Bulk Email Error:', err));
@@ -102,4 +59,66 @@ const createQuiz = async (req, res, next) => {
     }
 };
 
-module.exports = { createQuiz };
+/**
+ * @desc    Get quizzes by module (paginated)
+ * @route   GET /api/quizzes/module/:moduleId
+ * @access  All authenticated users
+ */
+const getQuizzesByModule = async (req, res, next) => {
+    try {
+        const filter = { moduleId: req.params.moduleId };
+
+        if (req.user.role === 'student') {
+            filter.isActive = true;
+        }
+
+        const result = await paginate(Quiz, filter, req.query, (q) =>
+            q.populate('createdBy', 'name email').populate('moduleId', 'moduleName moduleCode')
+        );
+
+        return sendSuccess(res, result, 'Quizzes fetched successfully.');
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * @desc    Get a single quiz by ID
+ * @route   GET /api/quizzes/:id
+ * @access  All authenticated users
+ */
+const getQuizById = async (req, res, next) => {
+    try {
+        const quiz = await Quiz.findById(req.params.id)
+            .populate('createdBy', 'name email')
+            .populate('moduleId', 'moduleName moduleCode');
+
+        if (!quiz) return sendError(res, 'Quiz not found.', 404);
+        return sendSuccess(res, quiz, 'Quiz fetched successfully.');
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * @desc    Get all quizzes (paginated, supports filtering by type)
+ * @route   GET /api/quizzes
+ * @access  All authenticated users
+ */
+const getAllQuizzes = async (req, res, next) => {
+    try {
+        const filter = {};
+        if (req.query.quizType) filter.quizType = req.query.quizType;
+        if (req.user.role === 'student') filter.isActive = true;
+
+        const result = await paginate(Quiz, filter, req.query, (q) =>
+            q.populate('createdBy', 'name email').populate('moduleId', 'moduleName moduleCode')
+        );
+
+        return sendSuccess(res, result, 'Quizzes fetched successfully.');
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { createQuiz, getQuizzesByModule, getQuizById, getAllQuizzes };
