@@ -41,6 +41,10 @@ const Icons = {
 
 const accent = "#3b82f6";
 
+const ResultsAnalysis = ({ results, modules }) => {
+    const [search, setSearch] = useState("");
+    const [moduleFilter, setModuleFilter] = useState("");
+
  return (
         <div style={{ ...cssVars, position: "relative", minHeight: "100vh", background: "var(--bg)", color: "var(--text)", overflow: "hidden", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             <style>{`
@@ -117,4 +121,3 @@ const accent = "#3b82f6";
             </div>
         </div>
     );
-}
