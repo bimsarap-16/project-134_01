@@ -168,3 +168,87 @@ const login = async (req, res, next) => {
         next(error);
     }
 };
+
+/**
+ * @desc    Get current logged-in user profile
+ * @route   GET /api/auth/me
+ * @access  Private
+ */
+const getMe = async (req, res, next) => {
+    try {
+        return sendSuccess(res, req.user, 'Profile fetched successfully.');
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * @desc    Forgot Password - Send OTP
+ * @route   POST /api/auth/forgot-password
+ * @access  Public
+ */
+const forgotPassword = async (req, res, next) => {
+    try {
+        let { email } = req.body;
+        if (!email) return sendError(res, 'Email is required.', 400);
+        email = email.toLowerCase().trim();
+
+        const user = await User.findOne({ email });
+        if (!user) return sendError(res, 'No account found with this email.', 404);
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        await Otp.findOneAndUpdate({ email }, { otp, createdAt: Date.now() }, { upsert: true });
+
+        await sendEmail(
+            email,
+            'Password Reset Code - QuizHub',
+            `
+                <div style="font-family: 'Calibri', sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 12px;">
+                    <h2 style="color: #6366f1;">Password Reset</h2>
+                    <p>You requested to reset your password. Use the code below to proceed:</p>
+                    <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; font-size: 24px; font-weight: 800; letter-spacing: 4px; text-align: center; color: #1e2d45;">
+                        ${otp}
+                    </div>
+                    <p style="color: #666; font-size: 13px; margin-top: 20px;">If you didn't request this, please ignore this email.</p>
+                </div>
+            `
+        );
+
+        return sendSuccess(res, null, 'Reset code sent to your email.');
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * @desc    Reset Password
+ * @route   POST /api/auth/reset-password
+ * @access  Public
+ */
+const resetPassword = async (req, res, next) => {
+    try {
+        let { email, otp, password } = req.body;
+        if (!email || !otp || !password) return sendError(res, 'All fields are required.', 400);
+        email = email.toLowerCase().trim();
+        otp = otp.trim();
+
+        const validOtp = await Otp.findOne({ email, otp });
+        if (!validOtp) return sendError(res, 'Invalid or expired reset code.', 400);
+
+        const user = await User.findOne({ email });
+        if (!user) return sendError(res, 'User no longer exists.', 404);
+
+        user.password = password;
+        await user.save();
+
+        // Delete used OTP
+        await Otp.deleteOne({ _id: validOtp._id });
+
+        return sendSuccess(res, null, 'Password reset successful. You can now login.');
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { register, login, getMe, sendOTP, forgotPassword, resetPassword };
+
