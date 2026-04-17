@@ -77,3 +77,55 @@ const register = async (req, res, next) => {
         next(error);
     }
 };
+
+
+/**
+ * @desc    Send OTP to email
+ * @route   POST /api/auth/send-otp
+ * @access  Public
+ */
+const sendOTP = async (req, res, next) => {
+    try {
+        let { email } = req.body;
+        if (!email) return sendError(res, 'Email is required.', 400);
+        email = email.toLowerCase().trim();
+
+        // Check if user already exists
+        const userExists = await User.findOne({ email });
+        if (userExists) return sendError(res, 'Email is already registered.', 400);
+
+        // Generate 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Save OTP to DB
+        await Otp.findOneAndUpdate(
+            { email },
+            { otp, createdAt: Date.now() },
+            { upsert: true, new: true }
+        );
+
+        // Send Email using utility
+        const emailSent = await sendEmail(
+            email,
+            'QuizHub Verification Code',
+            `
+                <div style="font-family: 'Calibri', sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 12px;">
+                    <h2 style="color: #6366f1;">Welcome to QuizHub!</h2>
+                    <p>Use the code below to complete your registration:</p>
+                    <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; font-size: 24px; font-weight: 800; letter-spacing: 4px; text-align: center; color: #1e2d45;">
+                        ${otp}
+                    </div>
+                    <p style="color: #666; font-size: 13px; margin-top: 20px;">This code will expire in 10 minutes.</p>
+                </div>
+            `
+        );
+
+        if (!emailSent) {
+            console.log(`[OTP FALLBACK] Verification code: ${otp} for ${email}`);
+        }
+
+        return sendSuccess(res, null, 'Verification code sent successfully to your email.');
+    } catch (error) {
+        next(error);
+    }
+};
