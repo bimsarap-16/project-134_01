@@ -14,6 +14,7 @@ const createQuiz = async (req, res, next) => {
     try {
         const { quizType, scheduledStart, scheduledEnd } = req.body;
 
+        // Overlap Check for Exams
         if (quizType === 'exam') {
             const overlap = await Quiz.findOne({
                 quizType: 'exam',
@@ -34,20 +35,69 @@ const createQuiz = async (req, res, next) => {
         const quizData = { ...req.body, createdBy: req.user._id };
         const quiz = await Quiz.create(quizData);
 
+        // If it's an exam, notify all students
         if (quiz.quizType === 'exam') {
             try {
+                // Fetch students, module and lecturer details
                 const students = await User.find({ role: 'student' }).select('email name');
                 const module = await Module.findById(quiz.moduleId);
-                const lecturer = req.user;
+                const lecturer = req.user; // Current user is the lecturer
 
                 const scheduledDate = new Date(quiz.scheduledStart).toLocaleDateString();
                 const scheduledTime = new Date(quiz.scheduledStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-                const emailPromises = students.map(student =>
-                    sendEmail(student.email, `New Exam Published: ${quiz.title}`, `<p>Exam scheduled for ${module ? module.moduleName : 'N/A'}</p>`)
+                const emailPromises = students.map(student => 
+                    sendEmail(
+                        student.email,
+                        `New Exam Published: ${quiz.title}`,
+                        `
+                            <div style="font-family: 'Calibri', sans-serif; padding: 25px; border: 1px solid #e2e8f0; border-radius: 16px; max-width: 600px; color: #1e293b;">
+                                <h2 style="color: #6366f1; margin-top: 0;">New Exam Scheduled</h2>
+                                <p>Hi <b>${student.name}</b>,</p>
+                                <p>A new exam has been scheduled for your module.</p>
+                                
+                                <div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0; border: 1px solid #f1f5f9;">
+                                    <table style="width: 100%; border-collapse: collapse;">
+                                        <tr>
+                                            <td style="padding: 8px 0; color: #64748b; font-size: 14px; width: 120px;">Module:</td>
+                                            <td style="padding: 8px 0; color: #0f172a; font-weight: 600;">${module ? module.moduleName : 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Lecturer:</td>
+                                            <td style="padding: 8px 0; color: #0f172a; font-weight: 600;">${lecturer.name}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Exam Topic:</td>
+                                            <td style="padding: 8px 0; color: #0f172a; font-weight: 600;">${quiz.title}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Date:</td>
+                                            <td style="padding: 8px 0; color: #0f172a; font-weight: 600;">${scheduledDate}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Time:</td>
+                                            <td style="padding: 8px 0; color: #0f172a; font-weight: 600;">${scheduledTime}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Duration:</td>
+                                            <td style="padding: 8px 0; color: #0f172a; font-weight: 600;">${quiz.duration} Minutes</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                
+                                <p>Please ensure you are ready at the scheduled time. Good luck!</p>
+                                <p style="color: #64748b; font-size: 13px; margin-top: 25px; border-top: 1px solid #f1f5f9; padding-top: 15px;">
+                                    This is an automated notification from QuizHub Academic System.
+                                </p>
+                            </div>
+                        `
+                    )
                 );
 
+                // We don't necessarily need to await all of them before returning response to lecturer, 
+                // but for reliability we can.
                 Promise.all(emailPromises).catch(err => console.error('Bulk Email Error:', err));
+
             } catch (err) {
                 console.error('Notification Error:', err);
             }
@@ -68,6 +118,7 @@ const getQuizzesByModule = async (req, res, next) => {
     try {
         const filter = { moduleId: req.params.moduleId };
 
+        // Students only see active quizzes
         if (req.user.role === 'student') {
             filter.isActive = true;
         }
@@ -114,6 +165,7 @@ const updateQuiz = async (req, res, next) => {
             return sendError(res, 'Not authorized to update this quiz.', 403);
         }
 
+        // Overlap Check for Exams (Update)
         if (req.body.quizType === 'exam' || (quiz.quizType === 'exam' && (req.body.scheduledStart || req.body.scheduledEnd))) {
             const newStart = req.body.scheduledStart ? new Date(req.body.scheduledStart) : quiz.scheduledStart;
             const newEnd = req.body.scheduledEnd ? new Date(req.body.scheduledEnd) : quiz.scheduledEnd;
@@ -145,6 +197,30 @@ const updateQuiz = async (req, res, next) => {
 };
 
 /**
+ * @desc    Delete a quiz
+ * @route   DELETE /api/quizzes/:id
+ * @access  Lecturer (owner) or Admin
+ */
+const deleteQuiz = async (req, res, next) => {
+    try {
+        const quiz = await Quiz.findById(req.params.id);
+        if (!quiz) return sendError(res, 'Quiz not found.', 404);
+
+        const isOwner = quiz.createdBy.toString() === req.user._id.toString();
+        const isAdmin = req.user.role === 'admin';
+
+        if (!isOwner && !isAdmin) {
+            return sendError(res, 'Not authorized to delete this quiz.', 403);
+        }
+
+        await quiz.deleteOne();
+        return sendSuccess(res, null, 'Quiz deleted successfully.');
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
  * @desc    Get all quizzes (paginated, supports filtering by type)
  * @route   GET /api/quizzes
  * @access  All authenticated users
@@ -165,4 +241,4 @@ const getAllQuizzes = async (req, res, next) => {
     }
 };
 
-module.exports = { createQuiz, getQuizzesByModule, getQuizById, updateQuiz, getAllQuizzes };
+module.exports = { createQuiz, getQuizzesByModule, getQuizById, updateQuiz, deleteQuiz, getAllQuizzes };
