@@ -129,3 +129,42 @@ const sendOTP = async (req, res, next) => {
         next(error);
     }
 };
+
+/**
+ * @desc    Login user
+ * @route   POST /api/auth/login
+ * @access  Public
+ */
+const login = async (req, res, next) => {
+    try {
+        const { email, password } = req.body;
+
+        const user = await User.findOne({ email }).select('+password');
+        if (!user) {
+            return sendError(res, 'Wrong password or username', 401);
+        }
+
+        const isMatch = await user.matchPassword(password);
+        if (!isMatch) {
+            return sendError(res, 'Wrong password or username', 401);
+        }
+
+        const token = generateToken(user._id);
+
+        return sendSuccess(
+            res,
+            {
+                token,
+                user: {
+                    _id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                },
+            },
+            'Login successful.'
+        );
+    } catch (error) {
+        next(error);
+    }
+};
