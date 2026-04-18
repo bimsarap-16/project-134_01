@@ -96,6 +96,26 @@ const Chatbot = ({ dark, colors }) => {
                 </div>
             )}
             
+                        {/* ANIMATIONS */}
+            <style>{`
+                @keyframes slideUp {
+                    from { transform: translateY(20px); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                @keyframes pulse-ring {
+                    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59,130,246,0.7); }
+                    70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(59,130,246,0); }
+                    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+                }
+                @keyframes bounce {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-4px); }
+                }
+            `}</style>
         </>
     );
 
