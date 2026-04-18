@@ -47,3 +47,35 @@ const askChatbot = async (req, res, next) => {
         next(error);
     }
 };
+
+
+/**
+ * @desc    Get chat history for current user
+ * @route   GET /api/chatbot/history
+ * @access  Authenticated User
+ */
+const getChatHistory = async (req, res, next) => {
+    try {
+        const chat = await Chat.findOne({ studentId: req.user._id });
+        if (!chat) return sendSuccess(res, { messages: [] }, 'No chat history found.');
+        return sendSuccess(res, { messages: chat.messages }, 'Chat history fetched.');
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * @desc    Clear chat history for current user
+ * @route   DELETE /api/chatbot/history
+ * @access  Authenticated User
+ */
+const clearChatHistory = async (req, res, next) => {
+    try {
+        await Chat.findOneAndDelete({ studentId: req.user._id });
+        return sendSuccess(res, null, 'Chat history cleared successfully.');
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { askChatbot, getChatHistory, clearChatHistory };
