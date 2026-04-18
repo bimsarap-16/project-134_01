@@ -58,6 +58,7 @@ const renderFilteredQuizzes = (type) => {
                     {filteredQuizzes
                         .filter((quiz) => quiz.quizType === type)
                         .map((quiz) => {
+
                             // ===============================
                             // 3rd COMMIT — EXAM STATUS LOGIC
                             // ===============================
@@ -138,12 +139,19 @@ const renderFilteredQuizzes = (type) => {
 
                                             <span>⏱ {quiz.duration} min</span>
 
+                                            {/* 🔥 4th COMMIT — TIME PREVIEW */}
+                                            {quiz.quizType === "exam" && quiz.scheduledEnd && (
+                                                <span style={{ color: "#ef4444", fontWeight: 700 }}>
+                                                    ⌛ Ends: {new Date(quiz.scheduledEnd).toLocaleTimeString()}
+                                                </span>
+                                            )}
+
                                             {quiz.quizType === "exam" && quiz.scheduledStart && (
                                                 <span>🕐 {new Date(quiz.scheduledStart).toLocaleString()}</span>
                                             )}
                                         </div>
 
-                                        {/* 3rd commit status indicator */}
+                                        {/* Status Indicator */}
                                         {quiz.quizType === "exam" && (
                                             <div
                                                 style={{
@@ -193,14 +201,7 @@ const renderFilteredQuizzes = (type) => {
                                             cursor:
                                                 quiz.quizType === "exam" && status.disabled
                                                     ? "not-allowed"
-                                                    : "pointer",
-                                            transition: "all 0.2s",
-                                            boxShadow:
-                                                quiz.quizType === "exam" && status.disabled
-                                                    ? "none"
-                                                    : "0 4px 12px rgba(59,130,246,0.2)",
-                                            fontFamily: "'Calibri', sans-serif",
-                                            whiteSpace: "nowrap"
+                                                    : "pointer"
                                         }}
                                     >
                                         {quiz.quizType === "exam"
