@@ -14,6 +14,23 @@ const validate = (schema) => (req, res, next) => {
     next();
 };
 
+// ─── Auth Schemas ───────────────────────────────────────────────────────────
+
+
+const registerSchema = Joi.object({
+    name: Joi.string().min(4).max(100).required(),
+    email: Joi.string().email().lowercase().trim().required(),
+    password: Joi.string()
+        .min(8)
+        .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/)
+        .required()
+        .messages({
+            'string.pattern.base': 'Password must be at least 8 characters long and include: uppercase, lowercase, and number.',
+        }),
+    otp: Joi.string().length(6).required(),
+    role: Joi.string().valid('admin', 'lecturer', 'student').default('student'),
+});
+
 // ─── Question Schemas ────────────────────────────────────────────────────────
 
 const questionSchema = Joi.object({
