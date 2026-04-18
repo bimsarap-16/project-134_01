@@ -44,3 +44,4 @@ router.post(
     authorizeRoles("lecturer", "admin"),
     respondToTicket
 );
+module.exports = router;
