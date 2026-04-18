@@ -62,6 +62,20 @@ const ManageTickets = ({ toast }) => {
 useEffect(() => {
     fetchTickets();
 }, []);
+const handleResponse = async (id) => {
+    if (!responseTexts[id]) return toast("Response cannot be empty", "error");
+
+    setSubmitting(id);
+    try {
+        await ticketAPI.respond(id, { response: responseTexts[id] });
+        toast("Response sent & ticket resolved!", "success");
+        fetchTickets();
+    } catch (e) {
+        toast("Failed to send response", "error");
+    } finally {
+        setSubmitting(null);
+    }
+};
 };
 
 const ResultsAnalysis = ({ results, modules }) => {
