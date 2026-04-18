@@ -43,4 +43,21 @@ export const authAPI = {
         api.get('/auth/me'),
 };
 
+// Questions
+export const questionAPI = {
+    getByQuiz: (quizId) => api.get(`/questions/quiz/${quizId}`),
+    create: (data) => api.post('/questions', data),
+    update: (id, data) => api.put(`/questions/${id}`, data),
+    delete: (id) => api.delete(`/questions/${id}`),
+};
+
+// Chatbot
+export const chatbotAPI = {
+    ask: (message) => api.post('/chatbot/ask', { message }),
+    getHistory: () => api.get('/chatbot/history'),
+    clearHistory: () => api.delete('/chatbot/history'),
+};
+
+
 export default api;
+
