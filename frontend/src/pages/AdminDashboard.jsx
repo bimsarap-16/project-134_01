@@ -560,3 +560,144 @@ const ModulesPage = ({ modules, setModules, toast }) => {
     );
 };
 
+const UsersPage = ({ users, role, setUsers, toast }) => {
+    const [search, setSearch] = useState("");
+    const [page, setPage] = useState(1);
+    const [formOpen, setFormOpen] = useState(false);
+    const [deleting, setDeleting] = useState(null);
+    const PER_PAGE = 5;
+
+    const filtered = (users || []).filter(u =>
+        (u?.name || "").toLowerCase().includes(search.toLowerCase()) ||
+        (u?.email || "").toLowerCase().includes(search.toLowerCase())
+    );
+    const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+
+    const handleCreate = async (form) => {
+        try {
+            await adminAPI.createUser(form);
+            toast(`${role} created!`);
+            setFormOpen(false);
+            const res = await adminAPI.getUsers({ role, limit: 100 });
+            setUsers(res.data.data.data);
+        } catch (e) { toast(e.response?.data?.message || "Error", "error"); }
+    };
+
+    const handleDelete = async () => {
+        try {
+            await adminAPI.deleteUser(deleting._id);
+            toast("User deleted", "info");
+            setDeleting(null);
+            const res = await adminAPI.getUsers({ role, limit: 100 });
+            setUsers(res.data.data.data);
+        } catch (e) { toast(e.response?.data?.message || "Error", "error"); }
+    };
+
+    return (
+        <div className="page-enter">
+            <ConfirmModal open={!!deleting} title="Remove User?" message={`Remove ${deleting?.name}?`} onConfirm={handleDelete} onCancel={() => setDeleting(null)} />
+            <FormModal open={formOpen} title={`Add ${role}`} onClose={() => setFormOpen(false)}>
+                <PersonForm onSave={handleCreate} onClose={() => setFormOpen(false)} role={role} />
+            </FormModal>
+
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24 }}>
+                <h1 style={{ fontFamily: "'Calibri', sans-serif", fontSize: "1.8rem" }}>{role === "lecturer" ? "Lecturers" : "Students"}</h1>
+                {role !== "student" && (
+                    <button onClick={() => setFormOpen(true)} className="btn-primary" style={{ padding: "10px 20px", background: role === "lecturer" ? "#3b82f6" : "#10b981", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, cursor: "pointer" }}>
+                        Add {role}
+                    </button>
+                )}
+            </div>
+
+            <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 20 }}>
+                <div style={{ padding: 20, borderBottom: "1px solid var(--border)" }}><Search value={search} onChange={v => { setSearch(v); setPage(1); }} /></div>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                        <tr style={{ borderBottom: "1px solid var(--border)", fontSize: 11, color: "var(--muted)", textTransform: "uppercase" }}>
+                            <th style={{ textAlign: "left", padding: 20 }}>Name</th>
+                            <th style={{ textAlign: "left", padding: 20 }}>Email</th>
+                            <th style={{ textAlign: "left", padding: 20 }}>Status</th>
+                            <th style={{ textAlign: "left", padding: 20 }}>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {paginated.map(u => (
+                            <tr key={u._id} style={{ borderBottom: "1px solid var(--border)" }}>
+                                <td style={{ padding: 20, fontWeight: 600 }}>{u.name}</td>
+                                <td style={{ padding: 20, color: "var(--muted)" }}>{u.email}</td>
+                                <td style={{ padding: 20 }}><Badge status={u.isActive !== false} /></td>
+                                <td style={{ padding: 20 }}>
+                                    <button onClick={() => setDeleting(u)} style={{ background: "none", border: "none", color: "var(--danger)", cursor: "pointer" }}><Ico p={I.trash} /></button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+                <div style={{ padding: 20 }}>
+                    <Pagination page={page} total={filtered.length} perPage={PER_PAGE} onChange={setPage} />
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ─── Profile Settings ─────────────────────────────────────────────────────────
+const ProfileSettings = ({ toast, user }) => {
+    const { setUser } = useAuth();
+    const [form, setForm] = useState({ name: user?.name || "", email: user?.email || "", password: "", confirmPassword: "" });
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!form.name || !form.email) return toast("Name and Email are required", "error");
+        if (form.password && form.password.length < 8) return toast("Password must be at least 8 characters long", "error");
+        if (form.password && form.password !== form.confirmPassword) return toast("Passwords do not match", "error");
+
+        setLoading(true);
+        try {
+            const res = await userAPI.updateProfile(form);
+            const updatedUser = res.data.data;
+            setUser(updatedUser);
+            localStorage.setItem("user", JSON.stringify(updatedUser));
+            toast("Profile updated successfully! ✨");
+        } catch (err) {
+            toast(err.response?.data?.message || "Failed to update profile", "error");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const inputStyle = { width: "100%", background: "var(--input)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 16px", color: "var(--text)", fontSize: 13.5, fontFamily: "'Calibri', sans-serif" };
+
+    return (
+        <div style={{ maxWidth: 640 }}>
+            <h1 style={{ margin: "0 0 8px", fontSize: 26, fontWeight: 800, color: "var(--text)" }}>Profile Settings</h1>
+            <p style={{ margin: "0 0 28px", color: "var(--text-muted)", fontSize: 13.5 }}>Manage your account details and security settings.</p>
+
+            <form onSubmit={handleSubmit} style={{ background: "var(--card)", borderRadius: 20, padding: 32, border: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 20 }}>
+                <div>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: "var(--text-muted)", marginBottom: 8, textTransform: "uppercase" }}>Full Name</label>
+                    <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={inputStyle} placeholder="Enter your full name" />
+                </div>
+                <div>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: "var(--text-muted)", marginBottom: 8, textTransform: "uppercase" }}>Email Address</label>
+                    <input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={inputStyle} placeholder="Enter your email" />
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                    <div>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: "var(--text-muted)", marginBottom: 8, textTransform: "uppercase" }}>New Password</label>
+                        <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} style={inputStyle} placeholder="••••••••" />
+                    </div>
+                    <div>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: "var(--text-muted)", marginBottom: 8, textTransform: "uppercase" }}>Confirm Password</label>
+                        <input type="password" value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} style={inputStyle} placeholder="••••••••" />
+                    </div>
+                </div>
+                <button type="submit" disabled={loading} className="btn-primary" style={{ marginTop: 12, width: "100%", padding: "14px", borderRadius: 14, border: "none", background: "var(--accent)", color: "#fff", cursor: loading ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 700 }}>
+                    {loading ? "Updating..." : "Save Changes"}
+                </button>
+            </form>
+        </div>
+    );
+};
+
