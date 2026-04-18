@@ -41,6 +41,58 @@ const Icons = {
 
 const accent = "#3b82f6";
 
+// ─── Pages ────────────────────────────────────────────────────────────────────
+const DashboardOverview = ({ modules, results, user, tickets = [] }) => {
+    const recentTickets = [...tickets].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
+
+    return (
+        <div>
+            <div style={{ marginBottom: 32 }}>
+                <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: "var(--text)", fontFamily: "'Plus Jakarta Sans', sans-serif", letterSpacing: "-0.01em" }}>Welcome Back, <span style={{ color: "var(--accent)" }}>{user?.name}</span></h1>
+                <p style={{ margin: "6px 0 0", color: "var(--text-muted)", fontSize: 14 }}>Here's what's happening with your modules today.</p>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20, marginBottom: 24 }}>
+                <StatCard label="Modules Assigned" value={modules.length} icon="book" color="#60a5fa" />
+                <StatCard label="Total Results" value={results.length} icon="results" color="#34d399" />
+                <StatCard label="Avg. Score" value={results.length ? `${Math.round(results.reduce((a, b) => a + (b.score / b.totalMarks) * 100, 0) / results.length)}%` : "0%"} icon="chart" color="#fb923c" />
+            </div>
+
+            {/* Recent Tickets Section */}
+            <div style={{ maxWidth: 800 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+                    <div style={{ background: "var(--accent)22", color: "var(--accent)", padding: 8, borderRadius: 10 }}>
+                        <Icon d={Icons.ticket} size={20} />
+                    </div>
+                    <h3 style={{ margin: 0, color: "var(--text)", fontSize: 20, fontWeight: 700, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Recent Tickets</h3>
+                </div>
+
+                <div style={{ display: "grid", gap: 12 }}>
+                    {recentTickets.length === 0 ? (
+                        <div style={{ padding: "40px", textAlign: "center", background: "var(--glass)", borderRadius: 20, border: "1px solid var(--glassBorder)", backdropFilter: "blur(24px) saturate(180%)", borderStyle: "dashed" }}>
+                            <p style={{ margin: 0, color: "var(--text-muted)", fontSize: 14 }}>No support tickets found.</p>
+                        </div>
+                    ) : recentTickets.map(t => (
+                        <div key={t._id} style={{ background: "var(--glass)", padding: "16px 20px", borderRadius: 18, border: "1px solid var(--glassBorder)", backdropFilter: "blur(24px) saturate(180%)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                                <div style={{ width: 44, height: 44, borderRadius: 12, background: "var(--card-nested)", display: "flex", alignItems: "center", justifyContent: "center", color: t.status === 'resolved' ? "#10b981" : "#fb923c", fontWeight: 800, fontSize: 14 }}>
+                                    {t.studentId?.name?.charAt(0) || "S"}
+                                </div>
+                                <div>
+                                    <h4 style={{ margin: "0 0 4px", fontSize: 15, color: "var(--text)", fontWeight: 700 }}>{t.subject}</h4>
+                                    <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>From: {t.studentId?.name} • {new Date(t.createdAt).toLocaleDateString()}</p>
+                                </div>
+                            </div>
+                            <span style={{ fontSize: 11, fontWeight: 800, padding: "4px 12px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.05em", background: t.status === 'resolved' ? "#10b98115" : "#fb923c15", color: t.status === 'resolved' ? "#10b981" : "#fb923c", border: `1px solid ${t.status === 'resolved' ? "#10b98122" : "#fb923c22"}` }}>
+                                {t.status}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const AddPracticeQuiz = ({ toast, modules }) => {
     const [form, setForm] = useState({ moduleId: "", title: "", duration: "" });
     const [questions, setQuestions] = useState([newQuestion()]);
