@@ -46,6 +46,22 @@ const ManageTickets = ({ toast }) => {
     const [loading, setLoading] = useState(true);
     const [responseTexts, setResponseTexts] = useState({});
     const [submitting, setSubmitting] = useState(null);
+
+    const fetchTickets = async () => {
+    setLoading(true);
+    try {
+        const res = await ticketAPI.getForLecturer();
+        setTickets(res.data.data);
+    } catch (e) {
+        toast("Failed to load tickets", "error");
+    } finally {
+        setLoading(false);
+    }
+};
+
+useEffect(() => {
+    fetchTickets();
+}, []);
 };
 
 const ResultsAnalysis = ({ results, modules }) => {
