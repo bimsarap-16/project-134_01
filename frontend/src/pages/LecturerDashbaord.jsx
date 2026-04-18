@@ -76,6 +76,13 @@ const handleResponse = async (id) => {
         setSubmitting(null);
     }
 };
+if (loading) {
+    return (
+        <p style={{ color: "var(--text-muted)", padding: 32 }}>
+            Loading tickets...
+        </p>
+    );
+}
 };
 
 const ResultsAnalysis = ({ results, modules }) => {
