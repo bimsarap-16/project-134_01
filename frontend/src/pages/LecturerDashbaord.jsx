@@ -185,14 +185,15 @@ const QuestionItem = ({ q, idx, onChange, onRemove, topics = [] }) => {
 
 // -------------------- Add Exam --------------------
 const AddExamQuiz = ({ toast, modules }) => {
-    const [form, setForm] = useState({
-        moduleId: "",
-        title: "",
-        duration: "",
-        scheduledStart: "",
-        scheduledEnd: "",
-        attemptsAllowed: 1,
-    });
+    // Scheduling fields: manage exam start time, end time, and duration
+     const [form, setForm] = useState ({
+          moduleId: "",
+          title: "",
+          duration: "",
+          scheduledStart: "",
+          scheduledEnd: "",
+          attemptsAllowed: 1,
+     });
     const [questions, setQuestions] = useState([newQuestion()]);
     const [loading, setLoading] = useState(false);
 
