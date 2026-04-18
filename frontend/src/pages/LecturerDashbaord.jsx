@@ -41,6 +41,39 @@ const Icons = {
 
 const accent = "#3b82f6";
 
+// ─── Confirmation Modal ───────────────────────────────────────────────────────
+const Modal = ({ open, title, message, onConfirm, onCancel, loading }) => {
+    if (!open) return null;
+    return (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ background: "var(--sidebar)", borderRadius: 24, padding: 40, maxWidth: 420, width: "90%", border: "1px solid var(--border)", boxShadow: "0 32px 80px rgba(0,0,0,0.5)", animation: "fadeIn 0.2s ease" }}>
+                <div style={{ width: 56, height: 56, background: "#fbbf2422", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: "#fbbf24" }}>
+                    <Icon d={Icons.warning} size={28} />
+                </div>
+                <h3 style={{ textAlign: "center", margin: "0 0 8px", color: "var(--text)", fontFamily: "'Calibri', sans-serif" }}>{title}</h3>
+                <p style={{ textAlign: "center", color: "var(--text-muted)", fontSize: 14, margin: "0 0 28px", lineHeight: 1.6 }}>{message}</p>
+                <div style={{ display: "flex", gap: 12 }}>
+                    <button onClick={onCancel} disabled={loading} style={{ flex: 1, padding: "12px", borderRadius: 12, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>Cancel</button>
+                    <button onClick={onConfirm} disabled={loading} style={{ flex: 1, padding: "12px", borderRadius: 12, border: "none", background: "linear-gradient(135deg, var(--accent), #7c3aed)", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 700 }}>
+                        {loading ? "Publishing..." : "Confirm Publish"}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ─── Shared Form Input ────────────────────────────────────────────────────────
+const FormField = ({ label, children, required }) => (
+    <div style={{ marginBottom: 20 }}>
+        <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--text-muted)", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}{required && <span style={{ color: "#f87171", marginLeft: 4 }}>*</span>}</label>
+        {children}
+    </div>
+);
+
+const inputStyle = { width: "100%", background: "var(--input)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 16px", color: "var(--text)", fontSize: 14, fontFamily: "'Calibri', sans-serif", boxSizing: "border-box", outline: "none", transition: "border-color 0.2s" };
+const selectStyle = { ...inputStyle, cursor: "pointer" };
+
 // ─── Pages ────────────────────────────────────────────────────────────────────
 const DashboardOverview = ({ modules, results, user, tickets = [] }) => {
     const recentTickets = [...tickets].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
