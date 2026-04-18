@@ -1,8 +1,17 @@
 import { useState, useEffect, useRef } from "react";
-import { moduleAPI, quizAPI, questionAPI, attemptAPI, resultAPI, chatbotAPI, announcementAPI, userAPI, ticketAPI } from "../services/api";
+import {
+    moduleAPI,
+    quizAPI,
+    questionAPI,
+    attemptAPI,
+    resultAPI,
+    chatbotAPI,
+    announcementAPI,
+    userAPI,
+    ticketAPI
+} from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import Chatbot from "../components/Chatbot";
-
 
 const Icon = ({ name, size = 20 }) => {
     const icons = {
@@ -29,9 +38,78 @@ const Icon = ({ name, size = 20 }) => {
     return icons[name] || null;
 };
 
+export default function StudentDashboard() {
+    const { user, setUser, logout } = useAuth();
 
+    // your states
+    const [dark, setDark] = useState(false);
+    const [page, setPage] = useState("dashboard");
+    const [modules, setModules] = useState([]);
+    const [quizzes, setQuizzes] = useState([]);
+    const [questions, setQuestions] = useState([]);
+    const [results, setResults] = useState([]);
+    const [selectedModule, setSelectedModule] = useState(null);
+    const [selectedQuiz, setSelectedQuiz] = useState(null);
+    const [activeAttempt, setActiveAttempt] = useState(null);
+    const [currentQ, setCurrentQ] = useState(0);
+    const [answers, setAnswers] = useState({});
+    const [submitted, setSubmitted] = useState({});
+    const [gradedResult, setGradedResult] = useState(null);
+    const [toast, setToast] = useState({ visible: false, message: "", type: "success" });
+    const [search, setSearch] = useState("");
+    const [announcements, setAnnouncements] = useState([]);
+    const [showAnnouncements, setShowAnnouncements] = useState(false);
+    const [pageLoading, setPageLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [lecturers, setLecturers] = useState([]);
+    const [filteredQuizzes, setFilteredQuizzes] = useState([]);
+    const [ticketForm, setTicketForm] = useState({ title: "", description: "", lecturerId: "" });
+    const [ticketLoading, setTicketLoading] = useState(false);
+    const [ticketFile, setTicketFile] = useState(null);
+    const [settingsForm, setSettingsForm] = useState({
+        name: user?.name || "",
+        email: user?.email || "",
+        password: "",
+        confirmPassword: ""
+    });
+    const [settingsLoading, setSettingsLoading] = useState(false);
+    const [timeLeft, setTimeLeft] = useState(null);
+    const [violations, setViolations] = useState(0);
+    const [myTickets, setMyTickets] = useState([]);
+    const [editingTicket, setEditingTicket] = useState(null);
+    const [now, setNow] = useState(new Date());
+    const [attemptHistory, setAttemptHistory] = useState([]);
 
-const sidebarLinks = [
+    // you already have these helpers in your full file
+    // keep your existing makeColors and showToast
+    const colors = makeColors(dark);
+
+    const showToast = (message, type = "success") => {
+        setToast({ visible: true, message, type });
+        setTimeout(() => setToast((t) => ({ ...t, visible: false })), 3000);
+    };
+
+    const navigateTo = (p) => setPage(p);
+
+    // ===============================
+    // 2nd COMMIT — LOAD REAL EXAMS ONLY
+    // ===============================
+    useEffect(() => {
+        if (page === "examList") {
+            setPageLoading(true);
+
+            quizAPI.getAll({
+                quizType: "exam",
+                limit: 100
+            })
+                .then((r) => setFilteredQuizzes(r.data.data.data || []))
+                .catch(() => showToast("Failed to load real exams", "error"))
+                .finally(() => setPageLoading(false));
+        }
+    }, [page]);
+    // ===============================
+
+    const sidebarLinks = [
         { id: "dashboard", label: "Dashboard", icon: "dashboard" },
         { id: "practiceList", label: "Practice Quizzes", icon: "practice" },
         { id: "examList", label: "Real Quizzes", icon: "trophy" },
@@ -46,124 +124,102 @@ const sidebarLinks = [
                 @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
                 @keyframes float-alt { 0%, 100% { transform: translate(0,0); } 50% { transform: translate(20px,20px); } }
             `}</style>
+
             <Toast {...toast} />
-            <div style={{ 
-                minHeight: "100vh", 
-                background: dark ? "#0a0f1e" : "#f0f7ff", 
-                fontFamily: "'Outfit', sans-serif", 
-                color: colors.text, 
-                display: "flex",
-                position: "relative",
-                overflow: "hidden"
-            }}>
-                {/* Background Liquid Blobs */}
+
+            <div
+                style={{
+                    minHeight: "100vh",
+                    background: dark ? "#0a0f1e" : "#f0f7ff",
+                    fontFamily: "'Outfit', sans-serif",
+                    color: colors.text,
+                    display: "flex",
+                    position: "relative",
+                    overflow: "hidden"
+                }}
+            >
                 <div style={{ position: "fixed", top: "-15%", left: "-10%", width: "65%", height: "65%", background: "radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 70%)", filter: "blur(100px)", borderRadius: "50%", zIndex: 0, animation: "float 12s infinite ease-in-out" }} />
                 <div style={{ position: "fixed", bottom: "-20%", right: "-5%", width: "55%", height: "55%", background: "radial-gradient(circle, rgba(14,165,233,0.2) 0%, transparent 70%)", filter: "blur(120px)", borderRadius: "50%", zIndex: 0, animation: "float-alt 18s infinite ease-in-out" }} />
                 <div style={{ position: "fixed", top: "25%", right: "-10%", width: "40%", height: "40%", background: "radial-gradient(circle, rgba(56,189,248,0.15) 0%, transparent 70%)", filter: "blur(80px)", borderRadius: "50%", zIndex: 0, animation: "float 14s infinite ease-in-out reverse" }} />
                 <div style={{ position: "fixed", bottom: "10%", left: "5%", width: "35%", height: "35%", background: "radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 70%)", filter: "blur(70px)", borderRadius: "50%", zIndex: 0, animation: "float-alt 22s infinite ease-in-out" }} />
 
                 <div style={{ display: "flex", width: "100%", position: "relative", zIndex: 1 }}>
-
-                {/* SIDEBAR - HIDDEN DURING EXAMS */}
-                {!(page === "practice" && selectedQuiz?.quizType === "exam") && (
-                    <div style={{ width: 240, minHeight: "100vh", flexShrink: 0, background: colors.sidebarGlass, backdropFilter: "blur(24px) saturate(180%)", borderRight: `1px solid ${colors.glassBorder}`, display: "flex", flexDirection: "column", position: "fixed", left: 0, top: 0, bottom: 0, zIndex: 100, boxShadow: "4px 0 32px rgba(0,0,0,0.1)" }}>
-                    <div style={{ padding: "32px 24px 28px", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                            <div style={{ width: 40, height: 40, borderRadius: 12, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>Q</div>
-                            <div>
-                                <div style={{ fontWeight: 800, fontSize: 18, color: "#fff", letterSpacing: "-0.02em" }}>QuizHub</div>
-                                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Student</div>
-                            </div>
-                        </div>
-                    </div>
-                    <nav style={{ padding: "24px 12px", flex: 1 }}>
-                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 800, padding: "0 14px", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1.5 }}>Menu</div>
-                        {sidebarLinks.map(link => (
-                            <div key={link.id} onClick={() => navigateTo(link.id)} style={{ 
-                                display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 12, marginBottom: 4, 
-                                background: page === link.id ? "rgba(255,255,255,0.15)" : "transparent", 
-                                color: "#fff", cursor: "pointer", transition: "all 0.2s ease", 
-                                fontWeight: page === link.id ? 700 : 500, fontSize: 14,
-                                opacity: page === link.id ? 1 : 0.85
-                            }} onMouseEnter={e => e.currentTarget.style.background = page === link.id ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.08)"} onMouseLeave={e => e.currentTarget.style.background = page === link.id ? "rgba(255,255,255,0.15)" : "transparent"}>
-                                <Icon name={link.icon} size={18} />{link.label}
-                            </div>
-                        ))}
-                    </nav>
-                    <div style={{ padding: "16px 12px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: 12, background: "rgba(0,0,0,0.05)" }}>
-                            <div onClick={() => { navigateTo("settings"); setSettingsForm({ name: user?.name, email: user?.email, password: "", confirmPassword: "" }); }} style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", flex: 1 }}>
-                                <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>👤</div>
-                                <div style={{ flex: 1, overflow: "hidden" }}>
-                                    <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{user?.name || "Student"}</div>
-                                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>Student</div>
-                                </div>
-                            </div>
-                            <div style={{ display: "flex", gap: 6, marginLeft: 8 }}>
-                                <div onClick={logout} style={{ cursor: "pointer", color: "rgba(255,255,255,0.7)", padding: 4 }}><Icon name="logout" size={18} /></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                )}
-
-                {/* MAIN */}
-                <div style={{ flex: 1, marginLeft: (page === "practice" && selectedQuiz?.quizType === "exam") ? 0 : 240, minHeight: "100vh" }}>
                     {!(page === "practice" && selectedQuiz?.quizType === "exam") && (
-                        <div style={{ position: "sticky", top: 0, zIndex: 50, background: colors.glass, backdropFilter: "blur(20px) saturate(180%)", borderBottom: `1px solid ${colors.glassBorder}`, padding: "14px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 10px 30px rgba(0,0,0,0.02)" }}>
-                            <div style={{ fontSize: 15, fontWeight: 700, color: colors.text }}>
-                                {page === "dashboard" ? "All Modules" : page === "practiceList" ? "Practice Quizzes" : page === "examList" ? "Real Quizzes" : page === "quizList" ? selectedModule?.moduleName || "Quizzes" : page === "practice" ? selectedQuiz?.title || "Practice" : page === "ticket" ? "Raise Ticket" : "Results"}
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                                <div style={{ position: "relative", cursor: "pointer", display: "flex", alignItems: "center" }} onClick={() => setShowAnnouncements(!showAnnouncements)}>
-                                    <Icon name="bell" size={20} />
-                                    {announcements.length > 0 && <span style={{ position: "absolute", top: -2, right: -4, background: "#f43f5e", width: 8, height: 8, borderRadius: "50%" }} />}
-                                    {showAnnouncements && (
-                                        <div style={{ position: "absolute", top: 36, right: -10, width: 360, maxHeight: 480, overflowY: "auto", background: dark ? "rgba(17,24,39,0.95)" : "rgba(255,255,255,0.95)", border: `1px solid ${colors.glassBorder}`, borderRadius: 20, padding: 0, boxShadow: "0 20px 40px rgba(0,0,0,0.3)", zIndex: 100, textAlign: "left", cursor: "default", backdropFilter: "blur(20px) saturate(180%)", animation: "fadeIn 0.2s ease" }} onClick={e => e.stopPropagation()}>
-                                            <div style={{ padding: "16px 20px", borderBottom: `1px solid ${colors.border}`, background: dark ? "rgba(59,130,246,0.1)" : "rgba(59,130,246,0.05)", display: "flex", alignItems: "center", gap: 10 }}>
-                                                <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg,#3b82f6,#2563eb)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}><Icon name="bell" size={16} /></div>
-                                                <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: colors.text, fontFamily: "'Calibri', sans-serif" }}>Latest Announcements</h4>
-                                                {announcements.length > 0 && <div style={{ marginLeft: "auto", background: colors.accent, color: "#fff", fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 12 }}>{announcements.length} NEW</div>}
-                                            </div>
-                                            <div style={{ padding: "12px" }}>
-                                                {announcements.length === 0 ? (
-                                                    <div style={{ padding: "40px 20px", textAlign: "center" }}>
-                                                        <div style={{ fontSize: 32, marginBottom: 8, opacity: 0.5 }}>📭</div>
-                                                        <p style={{ fontSize: 14, color: colors.textMid, margin: 0, fontWeight: 600 }}>You're all caught up!</p>
-                                                        <p style={{ fontSize: 12, color: colors.textFaint, margin: "4px 0 0" }}>Check back later for updates.</p>
-                                                    </div>
-                                                ) : announcements.map(a => (
-                                                    <div key={a._id} style={{ padding: "16px", borderRadius: 14, transition: "background 0.2s, transform 0.2s", cursor: "pointer", position: "relative" }} onMouseEnter={e => { e.currentTarget.style.background = `${colors.accent}11`; e.currentTarget.style.transform = "scale(1.01)"; }} onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.transform = "scale(1)"; }}>
-                                                        <div style={{ fontSize: 15, fontWeight: 800, color: colors.text, marginBottom: 4 }}>{a.title}</div>
-                                                        <div style={{ fontSize: 13, color: colors.textMid, margin: "0 0 8px", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{a.description}</div>
-                                                        <div style={{ fontSize: 11, color: colors.textFaint, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
-                                                            <div style={{ width: 6, height: 6, borderRadius: "50%", background: colors.accent, opacity: 0.5 }} />
-                                                            {new Date(a.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                                <div style={{ fontSize: 13, color: colors.textMid, background: colors.surfaceAlt, padding: "6px 14px", borderRadius: 20, border: `1px solid ${colors.border}` }}>
-                                    {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                        <div style={{ width: 240, minHeight: "100vh", flexShrink: 0, background: colors.sidebarGlass, backdropFilter: "blur(24px) saturate(180%)", borderRight: `1px solid ${colors.glassBorder}`, display: "flex", flexDirection: "column", position: "fixed", left: 0, top: 0, bottom: 0, zIndex: 100, boxShadow: "4px 0 32px rgba(0,0,0,0.1)" }}>
+                            <div style={{ padding: "32px 24px 28px", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                    <div style={{ width: 40, height: 40, borderRadius: 12, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>Q</div>
+                                    <div>
+                                        <div style={{ fontWeight: 800, fontSize: 18, color: "#fff", letterSpacing: "-0.02em" }}>QuizHub</div>
+                                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Student</div>
+                                    </div>
                                 </div>
                             </div>
+
+                            <nav style={{ padding: "24px 12px", flex: 1 }}>
+                                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 800, padding: "0 14px", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1.5 }}>Menu</div>
+                                {sidebarLinks.map((link) => (
+                                    <div
+                                        key={link.id}
+                                        onClick={() => navigateTo(link.id)}
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 12,
+                                            padding: "12px 14px",
+                                            borderRadius: 12,
+                                            marginBottom: 4,
+                                            background: page === link.id ? "rgba(255,255,255,0.15)" : "transparent",
+                                            color: "#fff",
+                                            cursor: "pointer",
+                                            transition: "all 0.2s ease",
+                                            fontWeight: page === link.id ? 700 : 500,
+                                            fontSize: 14,
+                                            opacity: page === link.id ? 1 : 0.85
+                                        }}
+                                    >
+                                        <Icon name={link.icon} size={18} />
+                                        {link.label}
+                                    </div>
+                                ))}
+                            </nav>
                         </div>
                     )}
-                    {page === "dashboard" && renderDashboard()}
-                    {page === "quizList" && renderQuizList()}
-                    {page === "practice" && renderPractice()}
-                    {page === "results" && renderResults()}
-                    {page === "ticket" && renderRaiseTicket()}
-                    {page === "practiceList" && renderFilteredQuizzes("practice")}
-                    {page === "examList" && renderFilteredQuizzes("exam")}
-                    {page === "settings" && renderSettings()}
+
+                    <div style={{ flex: 1, marginLeft: (page === "practice" && selectedQuiz?.quizType === "exam") ? 0 : 240, minHeight: "100vh" }}>
+                        {!(page === "practice" && selectedQuiz?.quizType === "exam") && (
+                            <div style={{ position: "sticky", top: 0, zIndex: 50, background: colors.glass, backdropFilter: "blur(20px) saturate(180%)", borderBottom: `1px solid ${colors.glassBorder}`, padding: "14px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 10px 30px rgba(0,0,0,0.02)" }}>
+                                <div style={{ fontSize: 15, fontWeight: 700, color: colors.text }}>
+                                    {page === "dashboard"
+                                        ? "All Modules"
+                                        : page === "practiceList"
+                                        ? "Practice Quizzes"
+                                        : page === "examList"
+                                        ? "Real Quizzes"
+                                        : page === "quizList"
+                                        ? selectedModule?.moduleName || "Quizzes"
+                                        : page === "practice"
+                                        ? selectedQuiz?.title || "Practice"
+                                        : page === "ticket"
+                                        ? "Raise Ticket"
+                                        : "Results"}
+                                </div>
+                            </div>
+                        )}
+
+                        {page === "dashboard" && renderDashboard()}
+                        {page === "quizList" && renderQuizList()}
+                        {page === "practice" && renderPractice()}
+                        {page === "results" && renderResults()}
+                        {page === "ticket" && renderRaiseTicket()}
+                        {page === "practiceList" && renderFilteredQuizzes("practice")}
+                        {page === "examList" && renderFilteredQuizzes("exam")}
+                        {page === "settings" && renderSettings()}
+                    </div>
                 </div>
             </div>
-        </div>
-        <Chatbot dark={dark} colors={makeColors(dark)} />
-    </>
-    );
 
+            <Chatbot dark={dark} colors={makeColors(dark)} />
+        </>
+    );
+}
