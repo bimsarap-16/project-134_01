@@ -701,3 +701,124 @@ const ProfileSettings = ({ toast, user }) => {
     );
 };
 
+// ─── Root ─────────────────────────────────────────────────────────────────────
+export default function AdminDashboard() {
+    const { user, logout } = useAuth();
+    const [page, setPage] = useState("dashboard");
+    const [dark, setDark] = useState(false);
+    const [collapsed, setCollapsed] = useState(false);
+    const [stats, setStats] = useState({ modules: 0, lecturers: 0, students: 0 });
+    const [modules, setModules] = useState([]);
+    const [lecturers, setLecturers] = useState([]);
+    const [students, setStudents] = useState([]);
+    const { toasts, add: toast } = useToast();
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const [modRes, lecRes, stuRes] = await Promise.all([
+                    moduleAPI.getAll({ limit: 100 }),
+                    adminAPI.getUsers({ role: 'lecturer', limit: 100 }),
+                    adminAPI.getUsers({ role: 'student', limit: 100 })
+                ]);
+                const m = modRes?.data?.data?.data || [];
+                const l = lecRes?.data?.data?.data || [];
+                const s = stuRes?.data?.data?.data || [];
+                setModules(m);
+                setLecturers(l);
+                setStudents(s);
+                setStats({ modules: m.length, lecturers: l.length, students: s.length });
+            } catch (e) {
+                console.error("Dashboard load error:", e);
+                toast("Failed to load dashboard data", "error");
+            }
+        };
+        load();
+    }, [page]);
+
+    const accent = "#3b82f6";
+    const cssVars = dark ? {
+        "--bg": "#0a0f1e", "--sidebar": "rgba(30, 41, 59, 0.8)", "--card": "rgba(15, 23, 42, 0.4)", "--card-nested": "rgba(15, 23, 42, 0.3)",
+        "--border": "rgba(255, 255, 255, 0.06)", "--text": "#f8fafc", "--text-muted": "#94a3b8", "--input": "rgba(30, 41, 59, 0.6)", "--accent": accent,
+        "--glass": "rgba(15, 23, 42, 0.4)", "--glassBorder": "rgba(255, 255, 255, 0.08)",
+    } : {
+        "--bg": "#f0f7ff", "--sidebar": "rgba(59, 130, 246, 0.85)", "--surface": "rgba(255, 255, 255, 0.4)",
+        "--card": "rgba(255, 255, 255, 0.4)", "--card-nested": "rgba(241, 245, 249, 0.3)",
+        "--border": "rgba(0,0,0,0.05)", "--text": "#0f172a", "--muted": "#64748b", "--row-hover": "rgba(59,130,246,0.05)", "--skel": "#e2e8f0", "--accent": accent, "--accent-glow": "rgba(59,130,246,0.15)",
+        "--glass": "rgba(255, 255, 255, 0.4)", "--glassBorder": "rgba(255, 255, 255, 0.5)",
+    };
+
+    const nav = [
+        { id: "dashboard", label: "Dashboard", icon: "dash", color: "#2563eb" },
+        { id: "modules", label: "Modules", icon: "modules", color: "#3b82f6" },
+        { id: "lecturers", label: "Lecturers", icon: "lecturers", color: "#3b82f6" },
+        { id: "students", label: "Students", icon: "students", color: "#10b981" },
+        { id: "profile", label: "Manage Profile", icon: "user", color: "#2563eb" },
+    ];
+
+    return (
+        <div style={{ ...cssVars, position: "relative", minHeight: "100vh", background: "var(--bg)", color: "var(--text)", overflow: "hidden", fontFamily: "'Outfit', sans-serif" }}>
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+                @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+                @keyframes float-alt { 0%, 100% { transform: translate(0,0); } 50% { transform: translate(20px,20px); } }
+                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+            `}</style>
+            <GlobalStyles />
+            <ToastContainer toasts={toasts} />
+            
+            {/* Background Blobs */}
+            <div style={{ position: "fixed", top: "-15%", left: "-10%", width: "65%", height: "65%", background: "radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 70%)", filter: "blur(100px)", borderRadius: "50%", zIndex: 0, animation: "float 12s infinite ease-in-out" }} />
+            <div style={{ position: "fixed", bottom: "-20%", right: "-5%", width: "55%", height: "55%", background: "radial-gradient(circle, rgba(14,165,233,0.2) 0%, transparent 70%)", filter: "blur(120px)", borderRadius: "50%", zIndex: 0, animation: "float-alt 18s infinite ease-in-out" }} />
+            <div style={{ position: "fixed", top: "25%", right: "-10%", width: "40%", height: "40%", background: "radial-gradient(circle, rgba(56,189,248,0.15) 0%, transparent 70%)", filter: "blur(80px)", borderRadius: "50%", zIndex: 0, animation: "float 14s infinite ease-in-out reverse" }} />
+            <div style={{ position: "fixed", bottom: "10%", left: "5%", width: "35%", height: "35%", background: "radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 70%)", filter: "blur(70px)", borderRadius: "50%", zIndex: 0, animation: "float-alt 22s infinite ease-in-out" }} />
+
+            <div style={{ display: "flex", width: "100%", position: "relative", zIndex: 1, minHeight: "100vh" }}>
+                <aside style={{ width: collapsed ? 70 : 248, background: "var(--sidebar)", backdropFilter: "blur(24px) saturate(180%)", borderRight: "1px solid var(--glassBorder)", display: "flex", flexDirection: "column", transition: "width .28s", position: "sticky", top: 0, height: "100vh", zIndex: 10, boxShadow: "4px 0 32px rgba(0,0,0,0.1)" }}>
+                    <div style={{ padding: "32px 24px 28px", borderBottom: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: 12, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 800, color: "#3b82f6", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", flexShrink: 0 }}>Q</div>
+                        {!collapsed && (
+                            <div style={{ animation: "fadeIn 0.3s ease both" }}>
+                                <div style={{ fontWeight: 800, fontSize: 18, color: "#fff", letterSpacing: "-0.02em" }}>QuizHub</div>
+                                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Administrator</div>
+                            </div>
+                        )}
+                    </div>
+
+                    <nav style={{ padding: "24px 12px", flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+                        {!collapsed && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 800, padding: "0 14px", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1.5 }}>Menu</div>}
+                        {nav.map(n => (
+                            <div key={n.id} onClick={() => setPage(n.id)} style={{
+                                display: "flex", alignItems: "center", gap: 14, padding: "12px 14px", borderRadius: 14, cursor: "pointer",
+                                background: page === n.id ? "rgba(255,255,255,0.15)" : "transparent", color: "#fff",
+                                fontWeight: page === n.id ? 700 : 500, fontSize: 14, transition: "0.2s",
+                                opacity: page === n.id ? 1 : 0.85
+                            }} onMouseEnter={e => e.currentTarget.style.background = page === n.id ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.08)"} onMouseLeave={e => e.currentTarget.style.background = page === n.id ? "rgba(255,255,255,0.15)" : "transparent"}>
+                                <Ico name={n.icon} size={20} />
+                                {!collapsed && <span>{n.label}</span>}
+                            </div>
+                        ))}
+                    </nav>
+                </aside>
+
+                <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+                    <header style={{ height: 62, borderBottom: "1px solid var(--border)", background: "var(--glass)", backdropFilter: "blur(24px) saturate(180%)", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 5 }}>
+                        <button onClick={() => setCollapsed(!collapsed)} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer" }}><Ico p={I.menu} /></button>
+                        <div style={{ display: "flex", gap: 12 }}>
+                            <button onClick={() => setPage("profile")} style={{ background: "none", border: "1px solid var(--border)", borderRadius: 10, padding: 8, cursor: "pointer", color: "var(--muted)" }}><Ico p={I.user} /></button>
+                            <button onClick={logout} style={{ padding: "8px 16px", background: "#ef444415", border: "1px solid #ef444430", borderRadius: 10, color: "#ef4444", cursor: "pointer", fontWeight: 600 }}>Logout</button>
+                        </div>
+                    </header>
+
+                    <main style={{ padding: 32, overflowY: "auto" }}>
+                        {page === "dashboard" && <Overview stats={stats} />}
+                        {page === "modules" && <ModulesPage modules={modules} setModules={setModules} toast={toast} />}
+                        {page === "lecturers" && <UsersPage users={lecturers} setUsers={setLecturers} role="lecturer" toast={toast} />}
+                        {page === "students" && <UsersPage users={students} setUsers={setStudents} role="student" toast={toast} />}
+                        {page === "profile" && <ProfileSettings toast={toast} user={user} />}
+                    </main>
+                </div>
+            </div>
+        </div>
+    );
+}
