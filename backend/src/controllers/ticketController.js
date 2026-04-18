@@ -79,3 +79,31 @@ exports.updateTicket = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+exports.respondToTicket = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { response } = req.body;
+        const ticket = await Ticket.findById(id);
+
+        if (!ticket) {
+            return res.status(404).json({ success: false, message: "Ticket not found." });
+        }
+
+        if (ticket.lecturerId.toString() !== req.user.id) {
+            return res.status(403).json({ success: false, message: "Only the assigned lecturer can respond to this ticket." });
+        }
+
+        if (!response) {
+            return res.status(400).json({ success: false, message: "Response content is required." });
+        }
+
+        ticket.response = response;
+        ticket.status = "resolved";
+        ticket.respondedAt = new Date();
+
+        await ticket.save();
+        res.status(200).json({ success: true, data: ticket });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
