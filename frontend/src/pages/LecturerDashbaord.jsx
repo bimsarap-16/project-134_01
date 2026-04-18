@@ -272,6 +272,66 @@ const EditPracticeQuiz = ({ quiz, modules, onBack, toast }) => {
         </div>
     );
 };
+
+// ─── Profile Settings ─────────────────────────────────────────────────────────
+const ProfileSettings = ({ toast, user }) => {
+    const { setUser } = useAuth();
+    const [form, setForm] = useState({ name: user?.name || "", email: user?.email || "", password: "", confirmPassword: "" });
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!form.name || !form.email) return toast("Name and Email are required", "error");
+        if (form.password && form.password.length < 8) return toast("Password must be at least 8 characters long", "error");
+        if (form.password && form.password !== form.confirmPassword) return toast("Passwords do not match", "error");
+
+        setLoading(true);
+        try {
+            const res = await userAPI.updateProfile(form);
+            const updatedUser = res.data.data;
+            setUser(updatedUser);
+            localStorage.setItem("user", JSON.stringify(updatedUser));
+            toast("Profile updated successfully! ✨");
+        } catch (err) {
+            toast(err.response?.data?.message || "Failed to update profile", "error");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const inputStyle = { width: "100%", background: "var(--input)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 16px", color: "var(--text)", fontSize: 14, fontFamily: "'Calibri', sans-serif" };
+
+    return (
+        <div style={{ maxWidth: 640 }}>
+            <h1 style={{ margin: "0 0 8px", fontSize: 28, fontWeight: 800, color: "var(--text)", fontFamily: "'Calibri', sans-serif" }}>Profile Settings</h1>
+            <p style={{ margin: "0 0 28px", color: "var(--text-muted)", fontSize: 14 }}>Manage your account details and security settings.</p>
+
+            <form onSubmit={handleSubmit} style={{ background: "var(--card)", borderRadius: 24, padding: 32, border: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 20 }}>
+                <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: "var(--text-muted)", marginBottom: 8, textTransform: "uppercase" }}>Full Name</label>
+                    <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={inputStyle} placeholder="Enter your full name" />
+                </div>
+                <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: "var(--text-muted)", marginBottom: 8, textTransform: "uppercase" }}>Email Address</label>
+                    <input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={inputStyle} placeholder="Enter your email" />
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                    <div>
+                        <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: "var(--text-muted)", marginBottom: 8, textTransform: "uppercase" }}>New Password</label>
+                        <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} style={inputStyle} placeholder="••••••••" />
+                    </div>
+                    <div>
+                        <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: "var(--text-muted)", marginBottom: 8, textTransform: "uppercase" }}>Confirm Password</label>
+                        <input type="password" value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} style={inputStyle} placeholder="••••••••" />
+                    </div>
+                </div>
+                <button type="submit" disabled={loading} style={{ marginTop: 12, width: "100%", padding: "14px", borderRadius: 14, border: "none", background: "linear-gradient(135deg, var(--accent), #2563eb)", color: "#fff", cursor: loading ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 700 }}>
+                    {loading ? "Updating..." : "Save Changes"}
+                </button>
+            </form>
+        </div>
+    );
+};
  
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function LecturerDashboard() {
