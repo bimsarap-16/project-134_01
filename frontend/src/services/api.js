@@ -43,4 +43,14 @@ export const authAPI = {
         api.get('/auth/me'),
 };
 
+// Questions
+export const questionAPI = {
+    getByQuiz: (quizId) => api.get(`/questions/quiz/${quizId}`),
+    create: (data) => api.post('/questions', data),
+    update: (id, data) => api.put(`/questions/${id}`, data),
+    delete: (id) => api.delete(`/questions/${id}`),
+};
+
+
 export default api;
+
