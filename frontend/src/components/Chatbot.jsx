@@ -13,5 +13,12 @@ const Chatbot = ({ dark, colors }) => {
     const [chatInput, setChatInput] = useState("");
     const [botTyping, setBotTyping] = useState(false);
     const chatRef = useRef(null);
+   
+     // Scroll chat
+    useEffect(() => {
+        if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    }, [messages, botTyping]);
+
+
 
 };
