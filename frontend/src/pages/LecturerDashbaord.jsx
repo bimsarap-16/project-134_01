@@ -284,7 +284,7 @@ const AddExamQuiz = ({ toast, modules }) => {
                             style={inputStyle}
                         />
                     </FormField>
-                   // Scheduling UI: allow lecturer to select exam start and end time
+                   {/* Scheduling UI: allow lecturer to select exam start and end time */}
                     <FormField label="Scheduled Start" required>
                         <input
                             type="datetime-local"
@@ -508,7 +508,7 @@ const EditExamQuiz = ({ quiz, modules, onBack, toast }) => {
                             style={inputStyle}
                         />
                     </FormField>
-                    // Scheduling UI: allow lecturer to select exam start and end time
+                    {/* Scheduling UI: allow lecturer to select exam start and end time */}
                     <FormField label="Scheduled Start" required>
                         <input
                             type="datetime-local"
