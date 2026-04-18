@@ -29,6 +29,19 @@ const Icon = ({ name, size = 20 }) => {
     return icons[name] || null;
 };
 
+
+
+ // Load filtered quizzes
+    useEffect(() => {
+        if (page === "practiceList" || page === "examList") {
+            setPageLoading(true);
+            quizAPI.getAll({ quizType: page === "practiceList" ? "practice" : "exam", limit: 100 })
+                .then(r => setFilteredQuizzes(r.data.data.data || []))
+                .catch(() => showToast("Failed to load quizzes", "error"))
+                .finally(() => setPageLoading(false));
+        }
+    }, [page]);
+
 // ── RENDER PRACTICE ────────────────────────────────────────────────────────────
     const renderPractice = () => {
         if (!selectedQuiz || questions.length === 0) return (
