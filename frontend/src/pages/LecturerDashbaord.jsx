@@ -104,6 +104,22 @@ return (
         )}
     </div>
 );
+<div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    {tickets.map(t => (
+        <div key={t._id}>
+            <h3>{t.title}</h3>
+
+            <span>{t.status}</span>
+
+            <p>{t.description}</p>
+
+            <div>
+                <span>From: {t.studentId?.name}</span>
+                <span>{new Date(t.createdAt).toLocaleString()}</span>
+            </div>
+        </div>
+    ))}
+</div>
 };
 
 const ResultsAnalysis = ({ results, modules }) => {
