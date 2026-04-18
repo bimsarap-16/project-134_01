@@ -51,6 +51,13 @@ export const questionAPI = {
     delete: (id) => api.delete(`/questions/${id}`),
 };
 
+// Chatbot
+export const chatbotAPI = {
+    ask: (message) => api.post('/chatbot/ask', { message }),
+    getHistory: () => api.get('/chatbot/history'),
+    clearHistory: () => api.delete('/chatbot/history'),
+};
+
 
 export default api;
 
