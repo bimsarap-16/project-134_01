@@ -120,6 +120,17 @@ return (
         </div>
     ))}
 </div>
+{t.fileUrl && (
+    <div>
+        <a
+            href={`http://localhost:5000${t.fileUrl}`}
+            target="_blank"
+            rel="noopener noreferrer"
+        >
+            📎 View Attachment ({t.fileName})
+        </a>
+    </div>
+)}
 };
 
 const ResultsAnalysis = ({ results, modules }) => {
