@@ -1,3 +1,17 @@
+// ─── Quiz Schemas ────────────────────────────────────────────────────────────
+
+const quizSchema = Joi.object({
+    title: Joi.string().min(3).max(300).required(),
+    moduleId: Joi.string().required(),
+    quizType: Joi.string().valid('practice', 'exam').required(),
+    scheduledStart: Joi.date().when('quizType', { is: 'exam', then: Joi.required() }),
+    scheduledEnd: Joi.date().when('quizType', { is: 'exam', then: Joi.required() }),
+    duration: Joi.number().min(1).required(),
+    isActive: Joi.boolean(),
+    attemptsAllowed: Joi.number().min(1).default(1),
+}).unknown(true);
+
+
 // ─── Question Schemas ────────────────────────────────────────────────────────
 
 const questionSchema = Joi.object({
