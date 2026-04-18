@@ -41,11 +41,14 @@ const Icons = {
 
 const accent = "#3b82f6";
 
+
 const AddExamQuiz = ({ toast, modules }) => {
     const [form, setForm] = useState({ moduleId: "", title: "", duration: "", scheduledStart: "", scheduledEnd: "", attemptsAllowed: 1 });
     const [questions, setQuestions] = useState([newQuestion()]);
     const [modal, setModal] = useState(false);
     const [loading, setLoading] = useState(false);
+
+
 
 
  return (
@@ -124,4 +127,3 @@ const AddExamQuiz = ({ toast, modules }) => {
             </div>
         </div>
     );
-}
