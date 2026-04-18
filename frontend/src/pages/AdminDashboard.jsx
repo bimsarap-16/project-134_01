@@ -347,3 +347,216 @@ const PersonForm = ({ initial, onSave, onClose, role }) => {
         </form>
     );
 };
+
+// ─── Pages ────────────────────────────────────────────────────────────────────
+const Overview = ({ stats }) => (
+    <div className="page-enter">
+        <div style={{ marginBottom: 30 }}>
+            <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: "1.625rem", color: "var(--text)", fontWeight: 800, letterSpacing: "-.02em" }}>
+                System <span style={{ color: "var(--accent)" }}>Overview</span>
+            </h1>
+            <p style={{ color: "var(--muted)", marginTop: 6, fontSize: 14 }}>Welcome Back, Administrator. Here's today's summary.</p>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 18, marginBottom: 28 }}>
+            <StatCard label="Total Modules" value={stats.modules} icon="modules" color="#3b82f6" sub="Active modules" delay={0} />
+            <StatCard label="Total Lecturers" value={stats.lecturers} icon="lecturers" color="#3b82f6" sub="Faculty members" delay={0.06} />
+            <StatCard label="Total Students" value={stats.students} icon="students" color="#10b981" sub="Enrolled students" delay={0.12} />
+            <StatCard label="Pending Tasks" value="0" icon="bell" color="#f59e0b" sub="Action items" delay={0.18} />
+        </div>
+    </div>
+);
+
+const ModulesPage = ({ modules, setModules, toast }) => {
+    const [search, setSearch] = useState("");
+    const [page, setPage] = useState(1);
+    const [formOpen, setFormOpen] = useState(false);
+    const [editing, setEditing] = useState(null);
+    const [deleting, setDeleting] = useState(null);
+    const [saving, setSaving] = useState(false);
+
+    const PER_PAGE = 5;
+
+    const filtered = (modules || []).filter((m) =>
+        (m?.moduleName || "").toLowerCase().includes(search.toLowerCase())
+    );
+
+    const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+
+    const handleSave = async (form) => {
+        if (saving) return;
+        setSaving(true);
+
+        try {
+            console.log("Sending module:", form); // DEBUG
+
+            if (editing) {
+                await moduleAPI.update(editing._id, form);
+                toast("Module updated!");
+            } else {
+                await moduleAPI.create(form);
+                toast("Module created!");
+            }
+
+            setFormOpen(false);
+            setEditing(null);
+
+            const res = await moduleAPI.getAll({ limit: 100 });
+            setModules(res.data.data.data);
+
+        } catch (e) {
+            const msg = e.response?.data?.message || e.message || "Error saving module";
+            toast(msg, "error");
+            console.error("Save error:", e.response?.data || e);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (saving) return;
+        setSaving(true);
+
+        try {
+            await moduleAPI.delete(deleting._id);
+            toast("Module deleted", "info");
+
+            setDeleting(null);
+
+            const res = await moduleAPI.getAll({ limit: 100 });
+            setModules(res.data.data.data);
+
+        } catch (e) {
+            toast(e.response?.data?.message || e.message || "Error deleting module", "error");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="page-enter">
+            <ConfirmModal
+                open={!!deleting}
+                title="Delete Module?"
+                message={`Delete "${deleting?.moduleName}"?`}
+                onConfirm={handleDelete}
+                onCancel={() => setDeleting(null)}
+            />
+
+            <FormModal
+                open={formOpen || !!editing}
+                title={editing ? "Edit Module" : "Add Module"}
+                onClose={() => {
+                    setFormOpen(false);
+                    setEditing(null);
+                }}
+            >
+                <ModuleForm
+                    key={editing ? editing._id : "new"}   // ✅ IMPORTANT FIX
+                    initial={editing}
+                    onSave={handleSave}
+                    onClose={() => {
+                        setFormOpen(false);
+                        setEditing(null);
+                    }}
+                    loading={saving}
+                    disabled={saving}
+                />
+            </FormModal>
+
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24 }}>
+                <h1 style={{ fontFamily: "'Calibri', sans-serif", fontSize: "1.8rem" }}>
+                    Modules
+                </h1>
+
+                <button
+                    onClick={() => {
+                        setEditing(null);
+                        setFormOpen(true);
+                    }}
+                    className="btn-primary"
+                    style={{
+                        padding: "10px 20px",
+                        background: "var(--accent)",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: 12,
+                        fontWeight: 700,
+                        cursor: "pointer"
+                    }}
+                >
+                    Add Module
+                </button>
+            </div>
+
+            <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 20 }}>
+                <div style={{ padding: 20, borderBottom: "1px solid var(--border)" }}>
+                    <Search
+                        value={search}
+                        onChange={(v) => {
+                            setSearch(v);
+                            setPage(1);
+                        }}
+                    />
+                </div>
+
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                        <tr style={{ borderBottom: "1px solid var(--border)", fontSize: 11, color: "var(--muted)", textTransform: "uppercase" }}>
+                            <th style={{ textAlign: "left", padding: 20 }}>Name</th>
+                            <th style={{ textAlign: "left", padding: 20 }}>Semester</th>
+                            <th style={{ textAlign: "left", padding: 20 }}>Actions</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {paginated.map((m) => (
+                            <tr key={m._id} style={{ borderBottom: "1px solid var(--border)" }}>
+                                <td style={{ padding: 20, fontWeight: 600 }}>{m.moduleName}</td>
+
+                                <td style={{ padding: 20 }}>
+                                    <span className="tag" style={{ background: "#3b82f618", color: "#3b82f6" }}>
+                                        {m.moduleCode}
+                                    </span>
+                                </td>
+
+                                <td style={{ padding: 20, color: "var(--muted)" }}>{m.semester}</td>
+
+                                <td style={{ padding: 20 }}>
+                                    <div style={{ display: "flex", gap: 8 }}>
+                                        <button
+                                            onClick={() => {
+                                                setEditing(m);
+                                                setFormOpen(false);
+                                            }}
+                                            style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer" }}
+                                        >
+                                            <Ico p={I.edit} />
+                                        </button>
+
+                                        <button
+                                            onClick={() => setDeleting(m)}
+                                            style={{ background: "none", border: "none", color: "var(--danger)", cursor: "pointer" }}
+                                        >
+                                            <Ico p={I.trash} />
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+
+                <div style={{ padding: 20 }}>
+                    <Pagination
+                        page={page}
+                        total={filtered.length}
+                        perPage={PER_PAGE}
+                        onChange={setPage}
+                    />
+                </div>
+            </div>
+        </div>
+    );
+};
+
