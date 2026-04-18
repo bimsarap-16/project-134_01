@@ -131,6 +131,32 @@ return (
         </a>
     </div>
 )}
+{t.status === "open" ? (
+    <div>
+        <textarea
+            value={responseTexts[t._id] || ""}
+            onChange={e =>
+                setResponseTexts({
+                    ...responseTexts,
+                    [t._id]: e.target.value
+                })
+            }
+            placeholder="Type your response here..."
+        />
+
+        <button
+            onClick={() => handleResponse(t._id)}
+            disabled={submitting === t._id}
+        >
+            {submitting === t._id ? "Sending..." : "Send Response"}
+        </button>
+    </div>
+) : (
+    <div>
+        <p>Resolved response shown below</p>
+        <p>{t.response}</p>
+    </div>
+)}
 };
 
 const ResultsAnalysis = ({ results, modules }) => {
