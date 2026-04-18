@@ -8,3 +8,20 @@ const questionSchema = Joi.object({
     topic: Joi.string().allow(''),
     marks: Joi.number().min(1).default(1),
 }).unknown(true);
+
+// ─── Chatbot Schema ───────────────────────────────────────────────────────────
+
+const chatSchema = Joi.object({
+    message: Joi.string().min(1).max(2000).required(),
+});
+
+module.exports = {
+    validate,
+    registerSchema,
+    adminUserSchema,
+    loginSchema,
+    moduleSchema,
+    quizSchema,
+    questionSchema,
+    chatSchema,
+};
