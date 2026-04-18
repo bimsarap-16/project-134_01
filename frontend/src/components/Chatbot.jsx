@@ -31,5 +31,20 @@ const Chatbot = ({ dark, colors }) => {
         }
     }, [chatOpen]);
 
+     const sendMessage = async () => {
+        if (!chatInput.trim()) return;
+        const text = chatInput.trim();
+        setMessages(m => [...m, { from: "user", text, time: new Date() }]);
+        setChatInput("");
+        setBotTyping(true);
+        try {
+            const res = await chatbotAPI.ask(text);
+            setMessages(m => [...m, { from: "bot", text: res.data.data.reply.replace(/\*\*/g, ""), time: new Date() }]);
+        } catch (e) {
+            setMessages(m => [...m, { from: "bot", text: e.response?.data?.message || "Sorry, AI is temporarily unavailable.", time: new Date() }]);
+        } finally { setBotTyping(false); }
+    };
+
+
 
 };
