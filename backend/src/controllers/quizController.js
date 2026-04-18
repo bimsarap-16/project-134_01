@@ -13,7 +13,7 @@ const paginate = require('../utils/paginate');
 const createQuiz = async (req, res, next) => {
     try {
         const { quizType, scheduledStart, scheduledEnd } = req.body;
-
+        // Scheduling logic: check for overlapping exam time slots to prevent conflicts
         // Overlap Check for Exams
         if (quizType === 'exam') {
             const overlap = await Quiz.findOne({
@@ -34,7 +34,7 @@ const createQuiz = async (req, res, next) => {
 
         const quizData = { ...req.body, createdBy: req.user._id };
         const quiz = await Quiz.create(quizData);
-
+        // Notification system: send email alerts to students when a new exam is scheduled
         // If it's an exam, notify all students
         if (quiz.quizType === 'exam') {
             try {
