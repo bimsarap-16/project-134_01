@@ -273,10 +273,69 @@ const EditPracticeQuiz = ({ quiz, modules, onBack, toast }) => {
     );
 };
  
+// ─── Main App ─────────────────────────────────────────────────────────────────
+export default function LecturerDashboard() {
+    const { user, logout } = useAuth();
+    const [page, setPage] = useState("dashboard");
+    const [dark, setDark] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const { toasts, add: toast } = useToasts();
 
+    const [modules, setModules] = useState([]);
+    const [results, setResults] = useState([]);
+    const [tickets, setTickets] = useState([]);
+    const [loading, setLoading] = useState(true);
 
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const [modRes, resRes, tickRes] = await Promise.all([
+                    moduleAPI.getAll({ limit: 100 }),
+                    resultAPI.getAll({ limit: 100 }),
+                    ticketAPI.getForLecturer()
+                ]);
+                const m = modRes?.data?.data?.data || [];
+                const r = resRes?.data?.data?.data || [];
+                const t = tickRes?.data?.data || [];
+                setModules(m);
+                setResults(r);
+                setTickets(t);
+            } catch (e) {
+                toast("Failed to load dashboard data", "error");
+            } finally {
+                setLoading(false);
+            }
+        };
+        load();
+    }, [page]);
 
+    const navItems = [
+        { id: "dashboard", label: "Dashboard", icon: "dashboard" },
+        { id: "practice", label: "Add Practice Quiz", icon: "practice" },
+        { id: "exam", label: "Add Real Exam", icon: "exam" },
+        { id: "manage", label: "Manage Exams", icon: "edit" },
+        { id: "managePractice", label: "Manage practice Quiz", icon: "book" },
+        { id: "announcements", label: "Announcements", icon: "bell" },
+        { id: "tickets", label: "Tickets", icon: "ticket" },
+        { id: "reports", label: "Exam Reports", icon: "chart" },
+        { id: "profile", label: "Manage Profile", icon: "user" },
+    ];
 
+    const cssVars = dark ? {
+        "--bg": "#0a0f1e", "--sidebar": "rgba(30, 41, 59, 0.8)", "--card": "rgba(15, 23, 42, 0.4)", "--card-nested": "rgba(15, 23, 42, 0.3)",
+        "--border": "rgba(255, 255, 255, 0.06)", "--text": "#f8fafc", "--text-muted": "#94a3b8", "--input": "rgba(30, 41, 59, 0.6)", "--accent": accent,
+        "--glass": "rgba(15, 23, 42, 0.4)", "--glassBorder": "rgba(255, 255, 255, 0.08)",
+    } : {
+        "--bg": "#f0f7ff", "--sidebar": "rgba(59, 130, 246, 0.85)", "--card": "rgba(255, 255, 255, 0.4)", "--card-nested": "rgba(241, 245, 249, 0.3)",
+        "--border": "rgba(0,0,0,0.05)", "--text": "#0f172a", "--text-muted": "#64748b", "--input": "rgba(255, 255, 255, 0.6)", "--accent": "#3b82f6",
+        "--glass": "rgba(255, 255, 255, 0.4)", "--glassBorder": "rgba(255, 255, 255, 0.5)",
+    };
+
+    if (loading) return (
+        <div style={{ ...cssVars, background: "var(--bg)", color: "var(--text)", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <p>Loading Dashboard...</p>
+        </div>
+    );
 
  return (
         <div style={{ ...cssVars, position: "relative", minHeight: "100vh", background: "var(--bg)", color: "var(--text)", overflow: "hidden", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
