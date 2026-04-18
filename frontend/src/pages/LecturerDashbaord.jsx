@@ -41,6 +41,59 @@ const Icons = {
 
 const accent = "#3b82f6";
 
+// ─── Toast System ─────────────────────────────────────────────────────────────
+let toastId = 0;
+const useToasts = () => {
+    const [toasts, setToasts] = useState([]);
+    const add = (msg, type = "success") => {
+        const id = ++toastId;
+        setToasts(t => [...t, { id, msg, type }]);
+        setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3500);
+    };
+    return { toasts, add };
+};
+
+const Toast = ({ toasts }) => (
+    <div style={{ position: "fixed", top: 24, right: 24, zIndex: 9999, display: "flex", flexDirection: "column", gap: 8 }}>
+        {toasts.map(t => (
+            <div key={t.id} style={{
+                background: t.type === "success" ? "linear-gradient(135deg,#065f46,#064e3b)" : t.type === "error" ? "linear-gradient(135deg,#7f1d1d,#991b1b)" : "linear-gradient(135deg,#1e3a5f,#1e40af)",
+                color: "#fff", padding: "12px 20px", borderRadius: 12, fontSize: 14, fontWeight: 500,
+                boxShadow: "0 8px 32px rgba(0,0,0,0.3)", border: `1px solid ${t.type === "success" ? "#34d39940" : t.type === "error" ? "#f8717140" : "#60a5fa40"}`,
+                animation: "slideIn 0.3s ease", minWidth: 280,
+                display: "flex", alignItems: "center", gap: 10
+            }}>
+                <span style={{ fontSize: 18 }}>{t.type === "success" ? "✓" : t.type === "error" ? "✗" : "ℹ"}</span>
+                {t.msg}
+            </div>
+        ))}
+    </div>
+);
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+const StatCard = ({ label, value, icon, color, delta }) => (
+    <div style={{
+        background: "var(--glass)", borderRadius: 20, padding: "24px 28px",
+        border: "1px solid var(--glassBorder)", position: "relative", overflow: "hidden",
+        backdropFilter: "blur(20px) saturate(180%)",
+        transition: "transform 0.2s, box-shadow 0.2s", cursor: "default",
+    }}
+        className="stat-card"
+    >
+        <div style={{ position: "absolute", top: -20, right: -20, width: 90, height: 90, borderRadius: "50%", background: `${color}25` }} />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+                <p style={{ margin: 0, fontSize: 13, color: "var(--text-muted)", fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase" }}>{label}</p>
+                <p style={{ margin: "8px 0 0", fontSize: 36, fontWeight: 800, color: "var(--text)", fontFamily: "'Calibri', sans-serif", letterSpacing: "-0.02em" }}>{value}</p>
+                {delta && <p style={{ margin: "4px 0 0", fontSize: 12, color: "#34d399" }}>↑ {delta} this week</p>}
+            </div>
+            <div style={{ background: `${color}22`, borderRadius: 14, padding: 12, color }}>
+                <Icon d={Icons[icon]} size={24} />
+            </div>
+        </div>
+    </div>
+);
+
 // ─── Confirmation Modal ───────────────────────────────────────────────────────
 const Modal = ({ open, title, message, onConfirm, onCancel, loading }) => {
     if (!open) return null;
