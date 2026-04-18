@@ -50,6 +50,18 @@ const loginSchema = Joi.object({
     password: Joi.string().required(),
 });
 
+
+
+// ─── Module Schemas ──────────────────────────────────────────────────────────
+
+const moduleSchema = Joi.object({
+    moduleName: Joi.string().min(2).max(200).required(),
+    moduleCode: Joi.string().min(2).max(20).required(),
+    semester: Joi.string().required(),
+    description: Joi.string().allow('').max(1000),
+    topics: Joi.array().items(Joi.string()),
+}).unknown(true);
+
 // ─── Question Schemas ────────────────────────────────────────────────────────
 
 const questionSchema = Joi.object({
