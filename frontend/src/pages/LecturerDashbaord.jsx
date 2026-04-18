@@ -83,6 +83,27 @@ if (loading) {
         </p>
     );
 }
+return (
+    <div>
+        <h1 style={{ margin: "0 0 8px", fontSize: 28, fontWeight: 800 }}>
+            Student Tickets
+        </h1>
+
+        <p style={{ margin: "0 0 28px", fontSize: 14 }}>
+            View tickets and issues raised directly to you from students.
+        </p>
+
+        {tickets.length === 0 ? (
+            <div style={{ padding: 32, textAlign: "center" }}>
+                <p>No tickets assigned to you yet.</p>
+            </div>
+        ) : (
+            <div>
+                {/* ticket list comes next */}
+            </div>
+        )}
+    </div>
+);
 };
 
 const ResultsAnalysis = ({ results, modules }) => {
