@@ -1,3 +1,19 @@
+const Joi = require('joi');
+const { sendError } = require('../utils/response');
+
+/**
+ * Validate request body against a Joi schema
+ * Usage: validate(schema)
+ */
+const validate = (schema) => (req, res, next) => {
+    const { error } = schema.validate(req.body, { abortEarly: false });
+    if (error) {
+        const message = error.details.map((d) => d.message.replace(/"/g, '')).join(', ');
+        return sendError(res, message, 422);
+    }
+    next();
+};
+
 // ─── Question Schemas ────────────────────────────────────────────────────────
 
 const questionSchema = Joi.object({
