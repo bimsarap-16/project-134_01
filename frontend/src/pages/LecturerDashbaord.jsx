@@ -41,6 +41,13 @@ const Icons = {
 
 const accent = "#3b82f6";
 
+const ManageTickets = ({ toast }) => {
+    const [tickets, setTickets] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [responseTexts, setResponseTexts] = useState({});
+    const [submitting, setSubmitting] = useState(null);
+};
+
 const ResultsAnalysis = ({ results, modules }) => {
     const [search, setSearch] = useState("");
     const [moduleFilter, setModuleFilter] = useState("");
