@@ -231,3 +231,119 @@ const Pagination = ({ page, total, perPage, onChange }) => {
     );
 };
 
+// ─── Forms ────────────────────────────────────────────────────────────────────
+const ModuleForm = ({ initial, onSave, onClose, loading, disabled }) => {
+    const [form, setForm] = useState(initial || { moduleName: "",  moduleCode: "",semester: "", description: "" });
+    const [topicsInput, setTopicsInput] = useState(Array.isArray(initial?.topics) ? initial.topics.join(", ") : "");
+    const [errors, setErrors] = useState({});
+
+
+    useEffect(() => {
+        setForm(initial || { moduleName: "", semester: "", description: "" });
+        setTopicsInput(Array.isArray(initial?.topics) ? initial.topics.join(", ") : "");
+    }, [initial]);
+
+    const validate = () => {
+        const e = {};
+        if (!form.moduleName.trim()) e.moduleName = "Module name is required";
+        if (!form.semester) e.semester = "Please select a semester";
+        if (!form.moduleCode.trim()) e.moduleCode = "Module code is required";
+        setErrors(e);
+        return Object.keys(e).length === 0;
+    };
+
+    const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: "" })); };
+
+    const handleSave = () => {
+        if (validate()) {
+            const topics = topicsInput.split(",").map(t => t.trim()).filter(Boolean);
+            onSave({ ...form, topics });
+        }
+    };
+
+    return (
+        <form onSubmit={e => { e.preventDefault(); handleSave(); }}>
+            <Field label="Module Name" required error={errors.moduleName}>
+                <input value={form.moduleName} onChange={e => set("moduleName", e.target.value)} placeholder="e.g. Introduction to Programming" style={inp} />
+            </Field>
+            <Field label="Module Code" required error={errors.moduleCode}>
+                 <input value={form.moduleCode}  onChange={e => set("moduleCode", e.target.value)} placeholder="e.g. IT1010"  style={inp} /> 
+            </Field>
+            <Field label="Semester" required error={errors.semester}>
+                <select value={form.semester} onChange={e => set("semester", e.target.value)} style={{ ...inp, cursor: "pointer" }}>
+                    <option value="">-- Select Semester --</option>
+                    {SEMESTERS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+            </Field>
+            <Field label="Description">
+                <textarea value={form.description} onChange={e => set("description", e.target.value)} placeholder="Brief description of the module..." rows={3} style={{ ...inp, resize: "vertical" }} />
+            </Field>
+            <Field label="Lecture Topics (Comma Separated)">
+                <textarea value={topicsInput} onChange={e => setTopicsInput(e.target.value)} placeholder="e.g. Hooks, Context API, Components" rows={2} style={{ ...inp, resize: "vertical" }} />
+            </Field>
+            <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+                <button type="button" onClick={onClose} style={{ flex: 1, padding: "11px", borderRadius: 12, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontFamily: "'Calibri', sans-serif", fontWeight: 600 }}>Cancel</button>
+                <button type="submit" disabled={disabled} className="btn-primary" style={{ flex: 2, padding: "11px", borderRadius: 12, border: "none", background: "var(--accent)", color: "#fff", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.7 : 1, fontFamily: "'Calibri', sans-serif", fontWeight: 700 }}>
+                    {loading ? "Processing..." : (initial ? "Save Changes" : "Add Module")}
+                </button>
+            </div>
+        </form>
+    );
+};
+
+const PersonForm = ({ initial, onSave, onClose, role }) => {
+    const [form, setForm] = useState(initial || { name: "", email: "", password: "", role });
+    const [errors, setErrors] = useState({});
+    const [showPw, setShowPw] = useState(false);
+
+    const validate = () => {
+        const e = {};
+        if (!form.name.trim()) e.name = "Full name is required";
+        if (!form.email.trim() || !form.email.includes("@")) e.email = "Valid email is required";
+        if (!initial) {
+            if (!form.password.trim()) {
+                e.password = "Password is required";
+            } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(form.password)) {
+                e.password = "Password is too weak";
+            }
+        }
+        setErrors(e);
+        return Object.keys(e).length === 0;
+    };
+
+    const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: "" })); };
+
+    const isPassValid = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(form.password);
+
+    return (
+        <form onSubmit={e => { e.preventDefault(); if (validate()) onSave(form); }}>
+            <Field label="Full Name" required error={errors.name}>
+                <input value={form.name} onChange={e => set("name", e.target.value)} placeholder={`${role} full name`} style={inp} />
+            </Field>
+            <Field label="Email Address" required error={errors.email}>
+                <input type="email" value={form.email} onChange={e => set("email", e.target.value)} placeholder="name@university.edu" style={inp} />
+            </Field>
+            {!initial && (
+                <Field label="Password" required error={errors.password}>
+                    <div style={{ position: "relative" }}>
+                        <input type={showPw ? "text" : "password"} value={form.password} onChange={e => set("password", e.target.value)} placeholder="8+ chars, upper, lower, num, spec" style={{ ...inp, paddingRight: 44 }} />
+                        <button type="button" onClick={() => setShowPw(p => !p)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--muted)" }}>
+                            <Ico p={showPw ? I.eyeOff : I.eye} size={16} />
+                        </button>
+                    </div>
+                    {form.password && (
+                        <div style={{ fontSize: 11, marginTop: 6, color: isPassValid ? "#10b981" : "#ef4444" }}>
+                            {isPassValid ? '✅ Strong password' : 'Must have 8+ chars, upper, lower, number, & special char.'}
+                        </div>
+                    )}
+                </Field>
+            )}
+            <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+                <button type="button" onClick={onClose} style={{ flex: 1, padding: "11px", borderRadius: 12, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontFamily: "'Calibri', sans-serif", fontWeight: 600 }}>Cancel</button>
+                <button type="submit" disabled={!initial && !isPassValid} className="btn-primary" style={{ flex: 2, padding: "11px", borderRadius: 12, border: "none", background: role === "lecturer" ? "#3b82f6" : "#10b981", color: "#fff", cursor: (!initial && !isPassValid) ? "not-allowed" : "pointer", opacity: (!initial && !isPassValid) ? 0.6 : 1, fontFamily: "'Calibri', sans-serif", fontWeight: 700 }}>
+                    {initial ? "Save Changes" : `Add ${role}`}
+                </button>
+            </div>
+        </form>
+    );
+};
