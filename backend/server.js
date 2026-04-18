@@ -8,8 +8,7 @@ const errorHandler = require('./src/middleware/errorHandler');
 // ─── Route imports ────────────────────────────────────────────────────────────
 const authRoutes = require('./src/routes/authRoutes');
 const userRoutes = require('./src/routes/userRoutes');
-const questionRoutes = require('./src/routes/questionRoutes');
-const chatbotRoutes = require('./src/routes/chatbotRoutes');
+
 
 
 
@@ -56,8 +55,6 @@ app.get('/api/health', (req, res, next) => {
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/questions', questionRoutes);
-app.use('/api/chatbot', chatbotRoutes);
 
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────────
