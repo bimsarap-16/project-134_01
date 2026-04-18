@@ -19,6 +19,17 @@ const Chatbot = ({ dark, colors }) => {
         if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
     }, [messages, botTyping]);
 
+    // Load chat history on open
+    useEffect(() => {
+        if (chatOpen && messages.length === 1) {
+            chatbotAPI.getHistory().then(r => {
+                const hist = r.data.data.messages || [];
+                if (hist.length > 0) {
+                    setMessages([messages[0], ...hist.map(m => ({ from: m.role === "user" ? "user" : "bot", text: m.content, time: new Date(m.timestamp) }))]);
+                }
+            }).catch(() => { });
+        }
+    }, [chatOpen]);
 
 
 };
