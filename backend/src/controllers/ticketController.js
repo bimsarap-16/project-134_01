@@ -39,3 +39,14 @@ exports.getTicketsForLecturer = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+exports.getTicketsForStudent = async (req, res) => {
+    try {
+        const tickets = await Ticket.find({ studentId: req.user.id })
+            .populate("lecturerId", "name email")
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({ success: true, data: tickets });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
