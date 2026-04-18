@@ -57,3 +57,177 @@ const I = {
     shield: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
     inbox: ["M22 12h-6l-2 3h-4l-2-3H2", "M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"],
 };
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+const SEMESTERS = ["Semester 1", "Semester 2", "Semester 3", "Semester 4", "Semester 5", "Semester 6"];
+
+// ─── Toast System ─────────────────────────────────────────────────────────────
+let _tid = 0;
+const useToast = () => {
+    const [toasts, setToasts] = useState([]);
+    const add = useCallback((msg, type = "success") => {
+        const id = ++_tid;
+        setToasts(t => [...t, { id, msg, type }]);
+        setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3800);
+    }, []);
+    return { toasts, add };
+};
+
+const TOAST_CONFIG = {
+    success: { bg: "linear-gradient(135deg,#064e3b,#065f46)", icon: "✓", border: "#10b98140" },
+    error: { bg: "linear-gradient(135deg,#7f1d1d,#991b1b)", icon: "✕", border: "#ef444440" },
+    info: { bg: "linear-gradient(135deg,#0f172a,#1e3a8a)", icon: "ℹ", border: "rgba(59,130,246,0.3)" },
+    warning: { bg: "linear-gradient(135deg,#78350f,#92400e)", icon: "⚠", border: "#f59e0b40" },
+};
+
+const ToastContainer = ({ toasts }) => (
+    <div style={{ position: "fixed", top: 24, right: 24, zIndex: 9999, display: "flex", flexDirection: "column", gap: 10 }}>
+        {toasts.map(t => {
+            const c = TOAST_CONFIG[t.type] || TOAST_CONFIG.success;
+            return (
+                <div key={t.id} style={{ background: c.bg, border: `1px solid ${c.border}`, color: "#fff", padding: "13px 20px", borderRadius: 14, fontSize: 13.5, fontWeight: 500, boxShadow: "0 12px 40px rgba(0,0,0,.35)", display: "flex", alignItems: "center", gap: 10, minWidth: 300, animation: "toastIn .3s cubic-bezier(.22,1,.36,1) both" }}>
+                    <span style={{ fontSize: 16, fontWeight: 700 }}>{c.icon}</span>
+                    {t.msg}
+                </div>
+            );
+        })}
+    </div>
+);
+
+// ─── Modals ───────────────────────────────────────────────────────────────────
+const ConfirmModal = ({ open, title, message, onConfirm, onCancel, danger = true }) => {
+    const [mDown, setMDown] = useState(false);
+    const [dark, setDark] = useState(false);
+
+    useEffect(() => {
+        if (!open) return;
+        const h = (e) => e.key === "Escape" && onCancel();
+        window.addEventListener("keydown", h);
+        return () => window.removeEventListener("keydown", h);
+    }, [open, onCancel]);
+
+    if (!open) return null;
+    return (
+        <div
+            className="modal-bg"
+            onMouseDown={(e) => setMDown(e.target === e.currentTarget)}
+            onMouseUp={(e) => { if (mDown && e.target === e.currentTarget) onCancel(); }}
+            style={{ position: "fixed", inset: 0, background: dark ? "rgba(0,0,0,.7)" : "rgba(15,23,42,.4)", backdropFilter: "blur(12px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+        >
+            <div className="modal-box" style={{ background: "var(--glass)", borderRadius: 32, padding: 40, maxWidth: 420, width: "100%", border: "1px solid var(--glassBorder)", backdropFilter: "blur(32px) saturate(180%)", boxShadow: "0 40px 120px rgba(0,0,0,.4)" }}>
+                <div style={{ width: 56, height: 56, borderRadius: 16, background: danger ? "#ef444420" : "#3b82f620", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: danger ? "#ef4444" : "#3b82f6" }}>
+                    <Ico p={I.warn} size={26} />
+                </div>
+                <h3 style={{ textAlign: "center", marginBottom: 10, color: "var(--text)", fontFamily: "'Calibri', sans-serif", fontSize: "1.25rem" }}>{title}</h3>
+                <p style={{ textAlign: "center", color: "var(--muted)", fontSize: 13.5, marginBottom: 28, lineHeight: 1.6 }}>{message}</p>
+                <div style={{ display: "flex", gap: 12 }}>
+                    <button onClick={onCancel} style={{ flex: 1, padding: "11px", borderRadius: 12, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontFamily: "'Calibri', sans-serif", fontWeight: 600, fontSize: 14 }}>Cancel</button>
+                    <button onClick={onConfirm} style={{ flex: 1, padding: "11px", borderRadius: 12, border: "none", background: danger ? "#ef4444" : "#2563eb", color: "#fff", cursor: "pointer", fontFamily: "'Calibri', sans-serif", fontWeight: 700, fontSize: 14 }}>
+                        {danger ? "Delete" : "Confirm"}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const FormModal = ({ open, title, onClose, children }) => {
+    const [mDown, setMDown] = useState(false);
+    const [dark, setDark] = useState(false);
+
+    useEffect(() => {
+        if (!open) return;
+        const h = (e) => e.key === "Escape" && onClose();
+        window.addEventListener("keydown", h);
+        return () => window.removeEventListener("keydown", h);
+    }, [open, onClose]);
+
+    if (!open) return null;
+    return (
+        <div
+            className="modal-bg"
+            onMouseDown={(e) => setMDown(e.target === e.currentTarget)}
+            onMouseUp={(e) => { if (mDown && e.target === e.currentTarget) onClose(); }}
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.2)", backdropFilter: "blur(6px)",     
+  WebkitBackdropFilter: "blur(8px)",  zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+        >
+            <div className="modal-box" style={{ background: "var(--glass)", borderRadius: 32, padding: 0, maxWidth: 560, width: "100%", border: "1px solid var(--glassBorder)", backdropFilter: "blur(32px) saturate(180%)", boxShadow: "0 40px 120px rgba(0,0,0,.4)", maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                <div style={{ padding: "24px 32px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <h3 style={{ color: "var(--text)", fontFamily: "'Calibri', sans-serif", fontSize: "1.2rem" }}>{title}</h3>
+                    <button onClick={onClose} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, padding: "6px 8px", cursor: "pointer", color: "var(--muted)", display: "flex" }}>
+                        <Ico p={I.x} size={16} />
+                    </button>
+                </div>
+                <div style={{ padding: "28px 32px", overflowY: "auto", flex: 1 }}>{children}</div>
+            </div>
+        </div>
+    );
+};
+
+// ─── UI Components ────────────────────────────────────────────────────────────
+const Field = ({ label, required, error, children }) => (
+    <div style={{ marginBottom: 18 }}>
+        <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "var(--muted)", marginBottom: 7, textTransform: "uppercase", letterSpacing: ".05em" }}>
+            {label}{required && <span style={{ color: "#ef4444", marginLeft: 4 }}>*</span>}
+        </label>
+        {children}
+        {error && <p className="form-err">{error}</p>}
+    </div>
+);
+
+const inp = { width: "100%", background: "#ffffff", border: "1px solid var(--border)", borderRadius: 11, padding: "10px 14px", color: "var(--text)", fontSize: 14, fontFamily: "'Calibri', sans-serif", transition: "border .2s, box-shadow .2s" };
+
+const StatCard = ({ label, value, icon, color, sub, delay = 0 }) => (
+    <div className="stat-card" style={{ background: "var(--card)", borderRadius: 20, padding: "24px 26px", border: "1px solid var(--border)", position: "relative", overflow: "hidden", animation: `fadeUp .4s ${delay}s cubic-bezier(.22,1,.36,1) both` }}>
+        <div style={{ position: "absolute", top: -24, right: -24, width: 90, height: 90, borderRadius: "50%", background: `${color}18` }} />
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+            <div>
+                <p style={{ fontSize: 11.5, color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em" }}>{label}</p>
+                <p className="num" style={{ fontSize: 28, fontWeight: 700, color: "var(--text)", fontFamily: "'Plus Jakarta Sans', sans-serif", lineHeight: 1.1, marginTop: 4 }}>{value}</p>
+                {sub && <p style={{ fontSize: 12, color, marginTop: 5, fontWeight: 500 }}>{sub}</p>}
+            </div>
+            <div style={{ background: `${color}20`, borderRadius: 14, padding: 13, color, flexShrink: 0 }}>
+                <Ico p={I[icon]} size={22} />
+            </div>
+        </div>
+    </div>
+);
+
+const Badge = ({ status }) => {
+    const isActive = status === true || status === "Active";
+    const label = status === true ? "Active" : status === false ? "Inactive" : status;
+    return (
+        <span className="tag" style={{ background: isActive ? "#10b98118" : "#ef444418", color: isActive ? "#10b981" : "#ef4444", border: `1px solid ${isActive ? "#10b98130" : "#ef444430"}` }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "currentColor", marginRight: 6, display: "inline-block" }} />
+            {label}
+        </span>
+    );
+};
+
+const Search = ({ value, onChange, placeholder }) => (
+    <div style={{ position: "relative", flex: 1 }}>
+        <div style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none" }}>
+            <Ico p={I.search} size={16} />
+        </div>
+        <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder || "Search..."} style={{ ...inp, paddingLeft: 40, borderRadius: 12 }} />
+    </div>
+);
+
+const Pagination = ({ page, total, perPage, onChange }) => {
+    const pages = Math.ceil(total / perPage);
+    if (pages <= 1) return null;
+    return (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end", marginTop: 20 }}>
+            <button onClick={() => onChange(page - 1)} disabled={page === 1} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 9, padding: "6px 10px", cursor: page === 1 ? "not-allowed" : "pointer", color: page === 1 ? "var(--muted)" : "var(--text)", opacity: page === 1 ? .5 : 1 }}>
+                <Ico p={I.chevL} size={15} />
+            </button>
+            {Array.from({ length: pages }, (_, i) => i + 1).map(n => (
+                <button key={n} onClick={() => onChange(n)} style={{ background: n === page ? "var(--accent)" : "var(--surface)", border: "1px solid var(--border)", borderRadius: 9, padding: "6px 12px", cursor: "pointer", color: n === page ? "#fff" : "var(--text)", fontWeight: 500, fontSize: 13, fontFamily: "'Calibri', sans-serif" }}>{n}</button>
+            ))}
+            <button onClick={() => onChange(page + 1)} disabled={page === pages} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 9, padding: "6px 10px", cursor: page === pages ? "not-allowed" : "pointer", color: page === pages ? "var(--muted)" : "var(--text)", opacity: page === pages ? .5 : 1 }}>
+                <Ico p={I.chevR} size={15} />
+            </button>
+        </div>
+    );
+};
+
