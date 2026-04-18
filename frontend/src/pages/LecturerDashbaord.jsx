@@ -201,6 +201,7 @@ const AddExamQuiz = ({ toast, modules }) => {
     const removeQ = (i) => setQuestions((qs) => qs.filter((_, xi) => xi !== i));
     const addQ = () => setQuestions((qs) => [...qs, newQuestion()]);
 
+    // Validation logic: ensure correct exam scheduling, duration, and required fields before submission
     const validate = () => {
         if (!form.moduleId || !form.title || !form.duration || !form.scheduledStart || !form.scheduledEnd) {
             toast("Please fill all required fields.", "error");
