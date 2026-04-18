@@ -1,129 +1,713 @@
 import { useState, useEffect } from "react";
-import { moduleAPI, quizAPI, questionAPI, resultAPI, announcementAPI, ticketAPI, userAPI } from "../services/api";
-import { useAuth } from "../context/AuthContext";
+import { quizAPI, questionAPI } from "../services/api";
 
-// ─── Icons (inline SVG components) ───────────────────────────────────────────
-const Icon = ({ d, size = 20, stroke = "currentColor", fill = "none", strokeWidth = 1.8 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
-        {Array.isArray(d) ? d.map((path, i) => <path key={i} d={path} />) : <path d={d} />}
-    </svg>
-);
+// -------------------- Helpers --------------------
+const newQuestion = () => ({
+    questionText: "",
+    options: ["", "", "", ""],
+    correctAnswer: 0,
+    topic: "",
+    marks: 5,
+    explanation: "",
+});
 
-const Icons = {
-    dashboard: ["M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z", "M9 22V12h6v10"],
-    practice: ["M12 2L2 7l10 5 10-5-10-5", "M2 17l10 5 10-5", "M2 12l10 5 10-5"],
-    exam: ["M8 6h13", "M8 12h13", "M8 18h13", "M3 6h.01", "M3 12h.01", "M3 18h.01"],
-    results: ["M18 20V10", "M12 20V4", "M6 20v-6"],
-    bell: ["M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9", "M13.73 21a2 2 0 01-3.46 0"],
-    user: ["M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2", "M12 11a4 4 0 100-8 4 4 0 000 8z"],
-    logout: ["M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4", "M16 17l5-5-5-5", "M21 12H9"],
-    plus: "M12 5v14M5 12h14",
-    trash: ["M3 6h18", "M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"],
-    check: "M20 6L9 17l-5-5",
-    x: "M18 6L6 18M6 6l12 12",
-    download: ["M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4", "M7 10l5 5 5-5", "M12 15V3"],
-    search: ["M11 17.25A6.25 6.25 0 1117.25 11 6.26 6.26 0 0111 17.25z", "M16 16l3.5 3.5"],
-    calendar: ["M8 2v4", "M16 2v4", "M3 8h18", "rect x=3 y=4 width=18 height=18 rx=2"],
-    clock: ["M12 2a10 10 0 100 20 10 10 0 000-20z", "M12 6v6l4 2"],
-    shield: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
-    warning: ["M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z", "M12 9v4", "M12 17h.01"],
-    book: ["M4 19.5A2.5 2.5 0 016.5 17H20", "M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"],
-    menu: "M3 12h18M3 6h18M3 18h18",
-    chart: ["M3 3v18h18", "M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"],
-    moon: "M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z",
-    sun: ["M12 2v2", "M12 20v2", "M4.93 4.93l1.41 1.41", "M17.66 17.66l1.41 1.41", "M2 12h2", "M20 12h2", "M6.34 17.66l-1.41 1.41", "M19.07 4.93l-1.41 1.41", "M12 8a4 4 0 100 8 4 4 0 000-8z"],
-    chevronDown: "M6 9l6 6 6-6",
-    eye: ["M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z", "M12 9a3 3 0 100 6 3 3 0 000-6z"],
-    edit: ["M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7", "M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"],
-    layers: ["M12 2L2 7l10 5 10-5-10-5", "M2 17l10 5 10-5", "M2 12l10 5 10-5"],
-    ticket: ["M15 5v2", "M15 11v2", "M15 17v2", "M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2z"],
+const inputStyle = {
+    width: "100%",
+    background: "#fff",
+    border: "1px solid #d1d5db",
+    borderRadius: 12,
+    padding: "12px 16px",
+    color: "#111827",
+    fontSize: 14,
+    boxSizing: "border-box",
+    outline: "none",
 };
 
-const accent = "#3b82f6";
+const selectStyle = {
+    ...inputStyle,
+    cursor: "pointer",
+};
 
+const FormField = ({ label, children, required }) => (
+    <div style={{ marginBottom: 20 }}>
+        <label
+            style={{
+                display: "block",
+                fontSize: 13,
+                fontWeight: 600,
+                color: "#6b7280",
+                marginBottom: 8,
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+            }}
+        >
+            {label}
+            {required && <span style={{ color: "red", marginLeft: 4 }}>*</span>}
+        </label>
+        {children}
+    </div>
+);
 
-const AddExamQuiz = ({ toast, modules }) => {
-    const [form, setForm] = useState({ moduleId: "", title: "", duration: "", scheduledStart: "", scheduledEnd: "", attemptsAllowed: 1 });
-    const [questions, setQuestions] = useState([newQuestion()]);
-    const [modal, setModal] = useState(false);
-    const [loading, setLoading] = useState(false);
+const QuestionItem = ({ q, idx, onChange, onRemove, topics = [] }) => {
+    const update = (field, value) => onChange(idx, { ...q, [field]: value });
 
+    return (
+        <div
+            style={{
+                background: "#f9fafb",
+                borderRadius: 16,
+                padding: 20,
+                border: "1px solid #e5e7eb",
+                marginBottom: 16,
+            }}
+        >
+            <div
+                style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 16,
+                }}
+            >
+                <span
+                    style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: "#2563eb",
+                        background: "#dbeafe",
+                        padding: "4px 12px",
+                        borderRadius: 20,
+                    }}
+                >
+                    Question {idx + 1}
+                </span>
 
-
-
- return (
-        <div style={{ ...cssVars, position: "relative", minHeight: "100vh", background: "var(--bg)", color: "var(--text)", overflow: "hidden", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-                @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
-                @keyframes float-alt { 0%, 100% { transform: translate(0,0); } 50% { transform: translate(20px,20px); } }
-            `}</style>
-            <Toast toasts={toasts} />
-            
-            {/* Background Blobs */}
-            <div style={{ position: "fixed", top: "-15%", left: "-10%", width: "65%", height: "65%", background: "radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 70%)", filter: "blur(100px)", borderRadius: "50%", zIndex: 0, animation: "float 12s infinite ease-in-out" }} />
-            <div style={{ position: "fixed", bottom: "-20%", right: "-5%", width: "55%", height: "55%", background: "radial-gradient(circle, rgba(14,165,233,0.2) 0%, transparent 70%)", filter: "blur(120px)", borderRadius: "50%", zIndex: 0, animation: "float-alt 18s infinite ease-in-out" }} />
-            <div style={{ position: "fixed", top: "25%", right: "-10%", width: "40%", height: "40%", background: "radial-gradient(circle, rgba(56,189,248,0.15) 0%, transparent 70%)", filter: "blur(80px)", borderRadius: "50%", zIndex: 0, animation: "float 14s infinite ease-in-out reverse" }} />
-            <div style={{ position: "fixed", bottom: "10%", left: "5%", width: "35%", height: "35%", background: "radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 70%)", filter: "blur(70px)", borderRadius: "50%", zIndex: 0, animation: "float-alt 22s infinite ease-in-out" }} />
-
-            <div style={{ display: "flex", width: "100%", position: "relative", zIndex: 1, minHeight: "100vh" }}>
-
-                {/* Sidebar */}
-                <div style={{ width: sidebarOpen ? 256 : 72, background: "var(--sidebar)", backdropFilter: "blur(24px) saturate(180%)", borderRight: "1px solid var(--glassBorder)", display: "flex", flexDirection: "column", transition: "width 0.3s", overflow: "hidden", position: "relative", zIndex: 10, boxShadow: "4px 0 32px rgba(0,0,0,0.1)" }}>
-                    <div style={{ padding: "32px 24px 28px", borderBottom: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", gap: 12 }}>
-                        <div style={{ width: 40, height: 40, borderRadius: 12, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 800, color: "#3b82f6", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", flexShrink: 0 }}>Q</div>
-                        {sidebarOpen && (
-                            <div style={{ animation: "fadeIn 0.3s ease both" }}>
-                                <div style={{ fontWeight: 800, fontSize: 18, color: "#fff", letterSpacing: "-0.02em" }}>QuizHub</div>
-                                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Lecturer</div>
-                            </div>
-                        )}
-                    </div>
-
-                    <nav style={{ padding: "24px 12px", flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-                        {sidebarOpen && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 800, padding: "0 14px", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1.5 }}>Menu</div>}
-                        {navItems.map(item => (
-                            <button key={item.id} onClick={() => setPage(item.id)} style={{
-                                display: "flex", alignItems: "center", gap: 14, padding: "12px 14px", borderRadius: 14, border: "none", cursor: "pointer",
-                                background: page === item.id ? "rgba(255,255,255,0.15)" : "transparent", color: "#fff",
-                                fontWeight: page === item.id ? 700 : 500, fontSize: 14, transition: "0.2s",
-                                width: "100%", textAlign: "left", opacity: page === item.id ? 1 : 0.85
-                            }}>
-                                <Icon d={Icons[item.icon]} size={20} />
-                                {sidebarOpen && <span>{item.label}</span>}
-                            </button>
-                        ))}
-                    </nav>
-                </div>
-
-                {/* Main */}
-                <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                    <header style={{ height: 64, borderBottom: "1px solid var(--border)", padding: "0 28px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--glass)", backdropFilter: "blur(20px) saturate(180%)", position: "sticky", top: 0, zIndex: 50 }}>
-                        <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
-                            <Icon d={Icons.menu} size={22} />
-                        </button>
-                        <div style={{ display: "flex", gap: 12 }}>
-                            <button onClick={() => setPage("profile")} style={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text-muted)", padding: 8, cursor: "pointer" }}>
-                                <Icon d={Icons.user} size={18} />
-                            </button>
-                            <button onClick={logout} style={{ borderRadius: 10, border: "none", background: "#f8717122", color: "#f87171", padding: 8, cursor: "pointer" }}>
-                                <Icon d={Icons.logout} size={18} />
-                            </button>
-                        </div>
-                    </header>
-
-                    <main style={{ padding: 32 }}>
-                        {page === "dashboard" && <DashboardOverview modules={modules} results={results} user={user} tickets={tickets} />}
-                        {page === "practice" && <AddPracticeQuiz toast={toast} modules={modules} />}
-                        {page === "exam" && <AddExamQuiz toast={toast} modules={modules} />}
-                        {page === "manage" && <ManageExams toast={toast} modules={modules} />}
-                        {page === "managePractice" && <ManagePracticeQuizzes toast={toast} modules={modules} />}
-                        {page === "announcements" && <AddAnnouncement toast={toast} modules={modules} user={user} />}
-                        {page === "tickets" && <ManageTickets toast={toast} />}
-                        {page === "reports" && <ExamReports modules={modules} toast={toast} />}
-                        {page === "profile" && <ProfileSettings toast={toast} user={user} />}
-                    </main>
-                </div>
+                <button
+                    type="button"
+                    onClick={() => onRemove(idx)}
+                    style={{
+                        background: "#fee2e2",
+                        border: "none",
+                        borderRadius: 10,
+                        padding: "6px 10px",
+                        cursor: "pointer",
+                        color: "#dc2626",
+                    }}
+                >
+                    Remove
+                </button>
             </div>
+
+            <textarea
+                value={q.questionText}
+                onChange={(e) => update("questionText", e.target.value)}
+                placeholder="Enter question text..."
+                style={{ ...inputStyle, minHeight: 80, resize: "vertical", marginBottom: 12 }}
+            />
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                {[0, 1, 2, 3].map((oi) => (
+                    <div key={oi} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, width: 16 }}>
+                            {String.fromCharCode(65 + oi)}.
+                        </span>
+                        <input
+                            value={q.options[oi] || ""}
+                            onChange={(e) => {
+                                const opts = [...q.options];
+                                opts[oi] = e.target.value;
+                                update("options", opts);
+                            }}
+                            placeholder={`Option ${String.fromCharCode(65 + oi)}`}
+                            style={{
+                                ...inputStyle,
+                                border:
+                                    q.correctAnswer === oi
+                                        ? "1px solid #2563eb"
+                                        : "1px solid #d1d5db",
+                                padding: "10px 12px",
+                            }}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => update("correctAnswer", oi)}
+                            style={{
+                                background: q.correctAnswer === oi ? "#2563eb" : "#f3f4f6",
+                                color: q.correctAnswer === oi ? "#fff" : "#111827",
+                                border: "none",
+                                borderRadius: 8,
+                                width: 32,
+                                height: 32,
+                                cursor: "pointer",
+                                fontWeight: 700,
+                            }}
+                            title="Mark as correct"
+                        >
+                            ✓
+                        </button>
+                    </div>
+                ))}
+            </div>
+
+            <div style={{ marginBottom: 12 }}>
+                <select
+                    value={q.topic || ""}
+                    onChange={(e) => update("topic", e.target.value)}
+                    style={selectStyle}
+                >
+                    <option value="">-- Select Lecture Topic --</option>
+                    {topics.map((t) => (
+                        <option key={t} value={t}>
+                            {t}
+                        </option>
+                    ))}
+                </select>
+            </div>
+
+            <textarea
+                value={q.explanation || ""}
+                onChange={(e) => update("explanation", e.target.value)}
+                placeholder="Explanation (optional)"
+                style={{ ...inputStyle, minHeight: 60, resize: "vertical", marginBottom: 12 }}
+            />
+
+            <input
+                type="number"
+                min="1"
+                value={q.marks}
+                onChange={(e) => update("marks", Number(e.target.value))}
+                placeholder="Marks"
+                style={inputStyle}
+            />
         </div>
     );
+};
+
+// -------------------- Add Exam --------------------
+const AddExamQuiz = ({ toast, modules }) => {
+    const [form, setForm] = useState({
+        moduleId: "",
+        title: "",
+        duration: "",
+        scheduledStart: "",
+        scheduledEnd: "",
+        attemptsAllowed: 1,
+    });
+    const [questions, setQuestions] = useState([newQuestion()]);
+    const [loading, setLoading] = useState(false);
+
+    const updateQ = (i, q) => setQuestions((qs) => qs.map((x, xi) => (xi === i ? q : x)));
+    const removeQ = (i) => setQuestions((qs) => qs.filter((_, xi) => xi !== i));
+    const addQ = () => setQuestions((qs) => [...qs, newQuestion()]);
+
+    const validate = () => {
+        if (!form.moduleId || !form.title || !form.duration || !form.scheduledStart || !form.scheduledEnd) {
+            toast("Please fill all required fields.", "error");
+            return false;
+        }
+        if (parseInt(form.duration) <= 0) {
+            toast("Duration must be a positive number.", "error");
+            return false;
+        }
+        if (new Date(form.scheduledStart) >= new Date(form.scheduledEnd)) {
+            toast("Start time must be before end time.", "error");
+            return false;
+        }
+        if (questions.some((q) => !q.questionText.trim())) {
+            toast("All questions must have text.", "error");
+            return false;
+        }
+        return true;
+    };
+
+    const handlePublish = async () => {
+        if (!validate()) return;
+
+        setLoading(true);
+        try {
+            const res = await quizAPI.create({ ...form, quizType: "exam" });
+            const quizId = res.data.data._id;
+
+            for (const q of questions) {
+                await questionAPI.create({ ...q, quizId });
+            }
+
+            toast("Exam published successfully!", "success");
+            setForm({
+                moduleId: "",
+                title: "",
+                duration: "",
+                scheduledStart: "",
+                scheduledEnd: "",
+                attemptsAllowed: 1,
+            });
+            setQuestions([newQuestion()]);
+        } catch (e) {
+            toast(e.response?.data?.message || "Failed to publish exam", "error");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div style={{ maxWidth: 900 }}>
+            <h1 style={{ margin: "0 0 8px", fontSize: 28, fontWeight: 800 }}>Add Real-Time Exam</h1>
+            <p style={{ margin: "0 0 32px", color: "#6b7280", fontSize: 14 }}>
+                Schedule a timed exam and add questions.
+            </p>
+
+            <div style={{ background: "#fff", borderRadius: 24, padding: 32, border: "1px solid #e5e7eb", marginBottom: 24 }}>
+                <h3 style={{ margin: "0 0 24px" }}>Exam Configuration</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                    <FormField label="Select Module" required>
+                        <select
+                            value={form.moduleId}
+                            onChange={(e) => setForm((f) => ({ ...f, moduleId: e.target.value }))}
+                            style={selectStyle}
+                        >
+                            <option value="">-- Choose Module --</option>
+                            {modules.map((m) => (
+                                <option key={m._id} value={m._id}>
+                                    {m.moduleName}
+                                </option>
+                            ))}
+                        </select>
+                    </FormField>
+
+                    <FormField label="Exam Title" required>
+                        <input
+                            value={form.title}
+                            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                            placeholder="e.g. CS201 Midterm Exam"
+                            style={inputStyle}
+                        />
+                    </FormField>
+
+                    <FormField label="Scheduled Start" required>
+                        <input
+                            type="datetime-local"
+                            value={form.scheduledStart}
+                            onChange={(e) => setForm((f) => ({ ...f, scheduledStart: e.target.value }))}
+                            style={inputStyle}
+                        />
+                    </FormField>
+
+                    <FormField label="Scheduled End" required>
+                        <input
+                            type="datetime-local"
+                            value={form.scheduledEnd}
+                            onChange={(e) => setForm((f) => ({ ...f, scheduledEnd: e.target.value }))}
+                            style={inputStyle}
+                        />
+                    </FormField>
+
+                    <FormField label="Duration (minutes)" required>
+                        <input
+                            type="number"
+                            min="1"
+                            value={form.duration}
+                            onChange={(e) => setForm((f) => ({ ...f, duration: e.target.value }))}
+                            placeholder="90"
+                            style={inputStyle}
+                        />
+                    </FormField>
+                </div>
+            </div>
+
+            <div style={{ background: "#fff", borderRadius: 24, padding: 32, border: "1px solid #e5e7eb", marginBottom: 24 }}>
+                <h3 style={{ margin: "0 0 24px" }}>Questions ({questions.length})</h3>
+                {questions.map((q, i) => (
+                    <QuestionItem
+                        key={i}
+                        q={q}
+                        idx={i}
+                        onChange={updateQ}
+                        onRemove={removeQ}
+                        topics={modules.find((m) => m._id === form.moduleId)?.topics || []}
+                    />
+                ))}
+                <button
+                    type="button"
+                    onClick={addQ}
+                    style={{
+                        width: "100%",
+                        padding: "14px",
+                        border: "2px dashed #cbd5e1",
+                        borderRadius: 16,
+                        background: "transparent",
+                        color: "#2563eb",
+                        cursor: "pointer",
+                        fontSize: 14,
+                        fontWeight: 700,
+                    }}
+                >
+                    Add Another Question
+                </button>
+            </div>
+
+            <button
+                type="button"
+                onClick={handlePublish}
+                disabled={loading}
+                style={{
+                    width: "100%",
+                    padding: "14px",
+                    borderRadius: 14,
+                    border: "none",
+                    background: "#2563eb",
+                    color: "#fff",
+                    cursor: "pointer",
+                    fontSize: 14,
+                    fontWeight: 700,
+                }}
+            >
+                {loading ? "Publishing..." : "Schedule & Publish Exam"}
+            </button>
+        </div>
+    );
+};
+
+// -------------------- Edit Exam --------------------
+const EditExamQuiz = ({ quiz, modules, onBack, toast }) => {
+    const formatDt = (dt) => {
+        if (!dt) return "";
+        const d = new Date(dt);
+        return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    };
+
+    const [form, setForm] = useState({
+        moduleId: quiz.moduleId?._id || quiz.moduleId,
+        title: quiz.title || "",
+        duration: quiz.duration || "",
+        scheduledStart: formatDt(quiz.scheduledStart),
+        scheduledEnd: formatDt(quiz.scheduledEnd),
+        attemptsAllowed: quiz.attemptsAllowed || 1,
+    });
+
+    const [questions, setQuestions] = useState([]);
+    const [deletedQuestions, setDeletedQuestions] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        const fetchQs = async () => {
+            try {
+                const res = await questionAPI.getByQuiz(quiz._id);
+                setQuestions(res.data?.data || []);
+            } catch (e) {
+                toast("Failed to load questions", "error");
+            }
+        };
+        fetchQs();
+    }, [quiz._id, toast]);
+
+    const updateQ = (i, q) => setQuestions((qs) => qs.map((x, xi) => (xi === i ? q : x)));
+    const removeQ = (i) => {
+        const qToDelete = questions[i];
+        if (qToDelete._id) {
+            setDeletedQuestions((prev) => [...prev, qToDelete._id]);
+        }
+        setQuestions((qs) => qs.filter((_, xi) => xi !== i));
+    };
+
+    const addQ = () => setQuestions((qs) => [...qs, newQuestion()]);
+
+    const validate = () => {
+        if (!form.moduleId || !form.title || !form.duration || !form.scheduledStart || !form.scheduledEnd) {
+            toast("Please fill all required fields.", "error");
+            return false;
+        }
+        if (parseInt(form.duration) <= 0) {
+            toast("Duration must be a positive number.", "error");
+            return false;
+        }
+        if (new Date(form.scheduledStart) >= new Date(form.scheduledEnd)) {
+            toast("Start time must be before end time.", "error");
+            return false;
+        }
+        if (questions.some((q) => !q.questionText?.trim())) {
+            toast("All questions must have text.", "error");
+            return false;
+        }
+        return true;
+    };
+
+    const handleSave = async () => {
+        if (!validate()) return;
+
+        setLoading(true);
+        try {
+            await quizAPI.update(quiz._id, form);
+
+            for (const dqId of deletedQuestions) {
+                await questionAPI.delete(dqId).catch(() => {});
+            }
+
+            for (const q of questions) {
+                if (q._id) {
+                    await questionAPI.update(q._id, q).catch(() => {});
+                } else {
+                    await questionAPI.create({ ...q, quizId: quiz._id }).catch(() => {});
+                }
+            }
+
+            toast("Exam updated successfully!", "success");
+            onBack();
+        } catch (e) {
+            toast(e.response?.data?.message || "Failed to update exam", "error");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div style={{ maxWidth: 900 }}>
+            <button
+                type="button"
+                onClick={onBack}
+                style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "#6b7280",
+                    cursor: "pointer",
+                    marginBottom: 16,
+                    fontWeight: 600,
+                }}
+            >
+                ← Back to Exams
+            </button>
+
+            <h1 style={{ margin: "0 0 8px", fontSize: 28, fontWeight: 800 }}>Edit Exam</h1>
+            <p style={{ margin: "0 0 32px", color: "#6b7280", fontSize: 14 }}>
+                Update scheduled exam details and questions.
+            </p>
+
+            <div style={{ background: "#fff", borderRadius: 24, padding: 32, border: "1px solid #e5e7eb", marginBottom: 24 }}>
+                <h3 style={{ margin: "0 0 24px" }}>Exam Details</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                    <FormField label="Select Module" required>
+                        <select
+                            value={form.moduleId}
+                            onChange={(e) => setForm((f) => ({ ...f, moduleId: e.target.value }))}
+                            style={selectStyle}
+                        >
+                            <option value="">-- Choose Module --</option>
+                            {modules.map((m) => (
+                                <option key={m._id} value={m._id}>
+                                    {m.moduleName}
+                                </option>
+                            ))}
+                        </select>
+                    </FormField>
+
+                    <FormField label="Exam Title" required>
+                        <input
+                            value={form.title}
+                            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                            style={inputStyle}
+                        />
+                    </FormField>
+
+                    <FormField label="Scheduled Start" required>
+                        <input
+                            type="datetime-local"
+                            value={form.scheduledStart}
+                            onChange={(e) => setForm((f) => ({ ...f, scheduledStart: e.target.value }))}
+                            style={inputStyle}
+                        />
+                    </FormField>
+
+                    <FormField label="Scheduled End" required>
+                        <input
+                            type="datetime-local"
+                            value={form.scheduledEnd}
+                            onChange={(e) => setForm((f) => ({ ...f, scheduledEnd: e.target.value }))}
+                            style={inputStyle}
+                        />
+                    </FormField>
+
+                    <FormField label="Duration (minutes)" required>
+                        <input
+                            type="number"
+                            min="1"
+                            value={form.duration}
+                            onChange={(e) => setForm((f) => ({ ...f, duration: e.target.value }))}
+                            style={inputStyle}
+                        />
+                    </FormField>
+                </div>
+            </div>
+
+            <div style={{ background: "#fff", borderRadius: 24, padding: 32, border: "1px solid #e5e7eb", marginBottom: 24 }}>
+                <h3 style={{ margin: "0 0 24px" }}>Questions ({questions.length})</h3>
+                {questions.map((q, i) => (
+                    <QuestionItem
+                        key={q._id || i}
+                        q={q}
+                        idx={i}
+                        onChange={updateQ}
+                        onRemove={removeQ}
+                        topics={modules.find((m) => m._id === form.moduleId)?.topics || []}
+                    />
+                ))}
+                <button
+                    type="button"
+                    onClick={addQ}
+                    style={{
+                        width: "100%",
+                        padding: "14px",
+                        border: "2px dashed #cbd5e1",
+                        borderRadius: 16,
+                        background: "transparent",
+                        color: "#2563eb",
+                        cursor: "pointer",
+                        fontSize: 14,
+                        fontWeight: 700,
+                    }}
+                >
+                    Add Another Question
+                </button>
+            </div>
+
+            <button
+                type="button"
+                onClick={handleSave}
+                disabled={loading}
+                style={{
+                    width: "100%",
+                    padding: "14px",
+                    borderRadius: 14,
+                    border: "none",
+                    background: "#2563eb",
+                    color: "#fff",
+                    cursor: "pointer",
+                    fontSize: 14,
+                    fontWeight: 700,
+                }}
+            >
+                {loading ? "Saving..." : "Save Changes"}
+            </button>
+        </div>
+    );
+};
+
+// -------------------- Manage Exams --------------------
+const ManageExams = ({ toast, modules }) => {
+    const [quizzes, setQuizzes] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [editingQuiz, setEditingQuiz] = useState(null);
+
+    const fetchExams = async () => {
+        try {
+            setLoading(true);
+            const res = await quizAPI.getAll({ quizType: "exam" });
+            setQuizzes(res.data?.data?.items || res.data?.data || []);
+        } catch (e) {
+            toast("Failed to load exams", "error");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchExams();
+    }, []);
+
+    if (editingQuiz) {
+        return (
+            <EditExamQuiz
+                quiz={editingQuiz}
+                modules={modules}
+                toast={toast}
+                onBack={() => {
+                    setEditingQuiz(null);
+                    fetchExams();
+                }}
+            />
+        );
+    }
+
+    return (
+        <div style={{ maxWidth: 1000 }}>
+            <h1 style={{ margin: "0 0 8px", fontSize: 28, fontWeight: 800 }}>Manage Exams</h1>
+            <p style={{ margin: "0 0 32px", color: "#6b7280", fontSize: 14 }}>
+                View and edit scheduled exams.
+            </p>
+
+            {loading ? (
+                <p>Loading exams...</p>
+            ) : quizzes.length === 0 ? (
+                <div
+                    style={{
+                        padding: "40px",
+                        border: "1px dashed #cbd5e1",
+                        borderRadius: 20,
+                        background: "#fff",
+                        textAlign: "center",
+                    }}
+                >
+                    No exams found.
+                </div>
+            ) : (
+                <div style={{ display: "grid", gap: 16 }}>
+                    {quizzes.map((quiz) => (
+                        <div
+                            key={quiz._id}
+                            style={{
+                                background: "#fff",
+                                padding: 24,
+                                borderRadius: 20,
+                                border: "1px solid #e5e7eb",
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "flex-start",
+                                    gap: 16,
+                                }}
+                            >
+                                <div>
+                                    <h3 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 700 }}>
+                                        {quiz.title}
+                                    </h3>
+                                    <p style={{ margin: "0 0 6px", color: "#6b7280", fontSize: 14 }}>
+                                        Module: {quiz.moduleId?.moduleName || "N/A"}
+                                    </p>
+                                    <p style={{ margin: "0 0 6px", color: "#6b7280", fontSize: 14 }}>
+                                        Start: {quiz.scheduledStart ? new Date(quiz.scheduledStart).toLocaleString() : "N/A"}
+                                    </p>
+                                    <p style={{ margin: 0, color: "#6b7280", fontSize: 14 }}>
+                                        End: {quiz.scheduledEnd ? new Date(quiz.scheduledEnd).toLocaleString() : "N/A"}
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingQuiz(quiz)}
+                                    style={{
+                                        padding: "10px 16px",
+                                        borderRadius: 10,
+                                        border: "none",
+                                        background: "#2563eb",
+                                        color: "#fff",
+                                        cursor: "pointer",
+                                        fontWeight: 600,
+                                    }}
+                                >
+                                    Edit
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// -------------------- Use inside LecturerDashboard main --------------------
+// Put these inside your LecturerDashboard return main section:
+//
+// {page === "exam" && <AddExamQuiz toast={toast} modules={modules} />}
+// {page === "manage" && <ManageExams toast={toast} modules={modules} />}
