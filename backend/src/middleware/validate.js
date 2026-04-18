@@ -31,6 +31,25 @@ const registerSchema = Joi.object({
     role: Joi.string().valid('admin', 'lecturer', 'student').default('student'),
 });
 
+const adminUserSchema = Joi.object({
+    name: Joi.string().min(4).max(100).required(),
+    email: Joi.string().email().lowercase().trim().required(),
+    password: Joi.string()
+        .min(8)
+        .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/)
+        .required()
+        .messages({
+            'string.pattern.base': 'Password must be at least 8 characters long and include: uppercase, lowercase, and number.',
+        }),
+    role: Joi.string().valid('admin', 'lecturer', 'student').required(),
+});
+
+
+const loginSchema = Joi.object({
+    email: Joi.string().email().lowercase().trim().required(),
+    password: Joi.string().required(),
+});
+
 // ─── Question Schemas ────────────────────────────────────────────────────────
 
 const questionSchema = Joi.object({
