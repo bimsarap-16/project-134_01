@@ -6,3 +6,12 @@ const Icon = ({ name, size = 20 }) => {
     };
     return icons[name] || null;
 };
+
+const Chatbot = ({ dark, colors }) => {
+    const [chatOpen, setChatOpen] = useState(false);
+    const [messages, setMessages] = useState([{ from: "bot", text: "👋 Hi! I'm your AI study assistant. Ask me anything about your questions or concepts!", time: new Date() }]);
+    const [chatInput, setChatInput] = useState("");
+    const [botTyping, setBotTyping] = useState(false);
+    const chatRef = useRef(null);
+
+};
