@@ -24,6 +24,7 @@ const QuizSchema = new mongoose.Schema(
             enum: ['practice', 'exam'],
             required: true,
         },
+        // scheduling validation logic
         scheduledStart: {
             type: Date,
             default: null,
