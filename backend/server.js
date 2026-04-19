@@ -8,14 +8,14 @@ const errorHandler = require('./src/middleware/errorHandler');
 // ─── Route imports ────────────────────────────────────────────────────────────
 const authRoutes = require('./src/routes/authRoutes');
 const userRoutes = require('./src/routes/userRoutes');
-
-
-
-
-
-
-
-
+const moduleRoutes = require('./src/routes/moduleRoutes');
+const quizRoutes = require('./src/routes/quizRoutes');
+const questionRoutes = require('./src/routes/questionRoutes');
+const attemptRoutes = require('./src/routes/attemptRoutes');
+const resultRoutes = require('./src/routes/resultRoutes');
+const chatbotRoutes = require('./src/routes/chatbotRoutes');
+const announcementRoutes = require('./src/routes/announcementRoutes');
+const ticketRoutes = require('./src/routes/ticketRoutes');
 
 // ─── Connect to Database ──────────────────────────────────────────────────────
 connectDB();
@@ -55,7 +55,14 @@ app.get('/api/health', (req, res, next) => {
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-
+app.use('/api/modules', moduleRoutes);
+app.use('/api/quizzes', quizRoutes);
+app.use('/api/questions', questionRoutes);
+app.use('/api/attempt', attemptRoutes);
+app.use('/api/results', resultRoutes);
+app.use('/api/chatbot', chatbotRoutes);
+app.use('/api/announcements', announcementRoutes);
+app.use('/api/tickets', ticketRoutes);
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────────
 app.use((req, res, next) => {
