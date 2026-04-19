@@ -28,6 +28,7 @@ const selectStyle = {
     cursor: "pointer",
 };
 
+
 const ManageTickets = ({ toast }) => {
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -135,31 +136,246 @@ return (
             )}
             </div>
 );
+////results my part
+    const filtered = (results || []).filter(r =>
+        (!moduleFilter || r?.quizId?.moduleId?._id === moduleFilter) &&
+        (!search || (r?.studentId?.name || "").toLowerCase().includes(search.toLowerCase()))
+    );
 
-const ResultsAnalysis = ({ results, modules }) => {
-    const [search, setSearch] = useState("");
-    const [moduleFilter, setModuleFilter] = useState("");
+///end results analysis
+const AddPracticeQuiz = ({ toast, modules }) => {
+    const [form, setForm] = useState({ moduleId: "", title: "", duration: "" });
+    const [questions, setQuestions] = useState([newQuestion()]);
+    const [loading, setLoading] = useState(false);
+
+    const updateQ = (i, q) => setQuestions(qs => qs.map((x, xi) => xi === i ? q : x));
+    const removeQ = (i) => setQuestions(qs => qs.filter((_, xi) => xi !== i));
+    const addQ = () => setQuestions(qs => [...qs, newQuestion()]);
+
+    const validate = () => {
+        if (!form.moduleId || !form.title || !form.duration) { toast("Please fill all required fields.", "error"); return false; }
+        if (parseInt(form.duration) <= 0) { toast("Duration must be a positive number.", "error"); return false; }
+        if (questions.some(q => !q.questionText.trim())) { toast("All questions must have text.", "error"); return false; }
+        return true;
+    };
+
+    const handlePublish = async () => {
+        if (!validate()) return;
+        setLoading(true);
+        try {
+            const res = await quizAPI.create({ ...form, quizType: "practice" });
+            const quizId = res.data.data._id;
+            // Sequential for simplicity or Promise.all
+            for (const q of questions) {
+                await questionAPI.create({ ...q, quizId });
+            }
+            toast("Practice quiz published successfully!");
+            setForm({ moduleId: "", title: "", duration: "" });
+            setQuestions([newQuestion()]);
+        } catch (e) {
+            toast(e.response?.data?.message || "Failed to publish quiz", "error");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div style={{ maxWidth: 860 }}>
+            <h1 style={{ margin: "0 0 8px", fontSize: 28, fontWeight: 800, color: "var(--text)", fontFamily: "'Calibri', sans-serif" }}>Add Practice Quiz</h1>
+            <p style={{ margin: "0 0 32px", color: "var(--text-muted)", fontSize: 14 }}>Create a module-based practice quiz for students.</p>
+
+            <div style={{ background: "var(--card)", borderRadius: 24, padding: 32, border: "1px solid var(--border)", marginBottom: 24 }}>
+                <h3 style={{ margin: "0 0 24px", color: "var(--text)", fontFamily: "'Calibri', sans-serif" }}>Quiz Details</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                    <FormField label="Select Module" required>
+                        <select value={form.moduleId} onChange={e => setForm(f => ({ ...f, moduleId: e.target.value }))} style={selectStyle}>
+                            <option value="">-- Choose Module --</option>
+                            {modules.map(m => <option key={m._id} value={m._id}>{m.moduleName}</option>)}
+                        </select>
+                    </FormField>
+                    <FormField label="Quiz Title" required>
+                        <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Week 4 Variables Quiz" style={inputStyle} />
+                    </FormField>
+                    <FormField label="Duration (minutes)" required>
+                        <input type="number" min="1" value={form.duration} onChange={e => setForm(f => ({ ...f, duration: e.target.value }))} placeholder="30" style={inputStyle} />
+                    </FormField>
+                </div>
+            </div>
+
+            <div style={{ background: "var(--card)", borderRadius: 24, padding: 32, border: "1px solid var(--border)", marginBottom: 24 }}>
+                <h3 style={{ margin: "0 0 24px", color: "var(--text)", fontFamily: "'Calibri', sans-serif" }}>Questions ({questions.length})</h3>
+                {questions.map((q, i) => <QuestionItem key={i} q={q} idx={i} onChange={updateQ} onRemove={removeQ} topics={modules.find(m => m._id === form.moduleId)?.topics || []} />)}
+                <button onClick={addQ} style={{ width: "100%", padding: "14px", border: "2px dashed var(--border)", borderRadius: 16, background: "transparent", color: "var(--accent)", cursor: "pointer", fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    <Icon d={Icons.plus} size={18} /> Add Another Question
+                </button>
+            </div>
+
+            <div style={{ display: "flex", gap: 12 }}>
+                <button onClick={handlePublish} disabled={loading} style={{ flex: 1, padding: "14px", borderRadius: 14, border: "none", background: "linear-gradient(135deg, var(--accent), #0891b2)", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 700 }}>
+                    {loading ? "Publishing..." : "Publish Quiz →"}
+                </button>
+            </div>
+        </div>
+    );
+};
 
 
-    const FormField = ({ label, children, required }) => (
-    <div style={{ marginBottom: 20 }}>
-        <label
-            style={{
-                display: "block",
-                fontSize: 13,
-                fontWeight: 600,
-                color: "#6b7280",
-                marginBottom: 8,
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-            }}
-        >
-            {label}
-            {required && <span style={{ color: "red", marginLeft: 4 }}>*</span>}
-        </label>
-        {children}
-    </div>
-);
+const ManagePracticeQuizzes = ({ toast, modules }) => {
+    const [selectedModule, setSelectedModule] = useState("");
+    const [quizzes, setQuizzes] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [editingQuiz, setEditingQuiz] = useState(null);
+
+    useEffect(() => {
+        if (!selectedModule) { setQuizzes([]); return; }
+        const fetchQuizzes = async () => {
+            setLoading(true);
+            try {
+                const res = await quizAPI.getByModule(selectedModule, { limit: 100 });
+                const modQuizzes = res.data?.data?.data || res.data?.data || [];
+                setQuizzes(modQuizzes.filter(q => q.quizType === "practice"));
+            } catch (e) { toast("Failed to load quizzes", "error"); } finally { setLoading(false); }
+        };
+        fetchQuizzes();
+    }, [selectedModule]);
+
+    if (editingQuiz) return (
+        <EditPracticeQuiz 
+            quiz={editingQuiz} 
+            modules={modules} 
+            onBack={() => { setEditingQuiz(null); setSelectedModule(""); }} 
+            toast={toast} 
+        />
+    );
+
+    return (
+        <div style={{ maxWidth: 860 }}>
+            <h1 style={{ margin: "0 0 8px", fontSize: 28, fontWeight: 800, color: "var(--text)", fontFamily: "'Calibri', sans-serif" }}>Manage Practice Quizzes</h1>
+            <p style={{ margin: "0 0 24px", color: "var(--text-muted)", fontSize: 14 }}>Select a module to view and edit practice quizzes.</p>
+            <div style={{ marginBottom: 24, display: "flex", gap: 12 }}>
+                <select value={selectedModule} onChange={e => setSelectedModule(e.target.value)} style={{ ...selectStyle, flex: 1 }}>
+                    <option value="">-- Select Module --</option>
+                    {modules.map(m => <option key={m._id} value={m._id}>{m.moduleName}</option>)}
+                </select>
+            </div>
+            {loading ? <p style={{ color: "var(--text-muted)" }}>Loading...</p> : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    {quizzes.length === 0 && selectedModule && <p style={{ color: "var(--text-muted)", background: "var(--card)", padding: 24, borderRadius: 16, textAlign: "center", border: "1px solid var(--border)" }}>No practice quizzes found for this module.</p>}
+                    {quizzes.map(q => (
+                        <div key={q._id} style={{ background: "var(--card)", padding: 20, borderRadius: 16, border: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div>
+                                <h4 style={{ margin: "0 0 4px", fontSize: 16, color: "var(--text)" }}>{q.title}</h4>
+                                <p style={{ margin: 0, fontSize: 13, color: "var(--text-muted)" }}>Questions: {q.questionCount || 'N/A'}</p>
+                            </div>
+                            <button onClick={() => setEditingQuiz(q)} style={{ padding: "8px 16px", borderRadius: 10, border: "1px solid var(--accent)", background: "transparent", color: "var(--accent)", cursor: "pointer", fontWeight: 600 }}>Edit Quiz</button>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ─── Edit Practice Quiz ────────────────────────────────────────────────────────
+const EditPracticeQuiz = ({ quiz, modules, onBack, toast }) => {
+    const [form, setForm] = useState({
+        moduleId: quiz.moduleId?._id || quiz.moduleId,
+        title: quiz.title,
+        description: quiz.description || ""
+    });
+    const [questions, setQuestions] = useState([]);
+    const [deletedQuestions, setDeletedQuestions] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [modal, setModal] = useState(false);
+
+    useEffect(() => {
+        const fetchQs = async () => {
+            try {
+                const res = await questionAPI.getByQuiz(quiz._id);
+                setQuestions(res.data?.data || []);
+            } catch (e) { toast("Failed to load questions", "error"); }
+        };
+        fetchQs();
+    }, [quiz._id]);
+
+    const updateQ = (i, q) => setQuestions(qs => qs.map((x, xi) => xi === i ? q : x));
+    const removeQ = (i) => {
+        const qToDelete = questions[i];
+        if (qToDelete._id) setDeletedQuestions(prev => [...prev, qToDelete._id]);
+        setQuestions(qs => qs.filter((_, xi) => xi !== i));
+    };
+
+    const validate = () => {
+        if (!form.moduleId || !form.title) { toast("Please fill all required fields.", "error"); return false; }
+        if (questions.some(q => !q.questionText.trim())) { toast("All questions must have text.", "error"); return false; }
+        return true;
+    };
+
+    const handleSave = async () => {
+        if (!validate()) return;
+        setLoading(true);
+        try {
+            await quizAPI.update(quiz._id, { ...form, quizType: "practice" });
+            for (const dqId of deletedQuestions) {
+                await questionAPI.delete(dqId).catch(() => { });
+            }
+            for (const q of questions) {
+                if (q._id) {
+                    await questionAPI.update(q._id, q).catch(() => { });
+                } else {
+                    await questionAPI.create({ ...q, quizId: quiz._id }).catch(() => { });
+                }
+            }
+            toast("Practice quiz updated successfully!");
+            setModal(false);
+            onBack();
+        } catch (e) {
+            toast(e.response?.data?.message || "Failed to update quiz", "error");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const inputStyle = { width: "100%", background: "var(--input)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 16px", color: "var(--text)", fontSize: 14, fontFamily: "'Calibri', sans-serif" };
+    const selectStyle = { ...inputStyle, cursor: "pointer" };
+
+    return (
+        <div style={{ maxWidth: 860 }}>
+            <Modal open={modal} title="Save Changes?" message="Are you sure you want to save the modifications to this practice quiz?" onConfirm={handleSave} onCancel={() => setModal(false)} loading={loading} />
+            <button onClick={onBack} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, marginBottom: 16, fontWeight: 600 }}>← Back to Practice Quizzes</button>
+            <h1 style={{ margin: "0 0 8px", fontSize: 28, fontWeight: 800, color: "var(--text)", fontFamily: "'Calibri', sans-serif" }}>Edit Practice Quiz: {quiz.title}</h1>
+            
+            <div style={{ background: "var(--card)", borderRadius: 24, padding: 32, border: "1px solid var(--border)", marginBottom: 24 }}>
+                <h3 style={{ margin: "0 0 24px", color: "var(--text)", fontFamily: "'Calibri', sans-serif" }}>Quiz Configuration</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                    <FormField label="Select Module" required>
+                        <select value={form.moduleId} onChange={e => setForm(f => ({ ...f, moduleId: e.target.value }))} style={selectStyle}>
+                            <option value="">-- Choose Module --</option>
+                            {modules.map(m => <option key={m._id} value={m._id}>{m.moduleName}</option>)}
+                        </select>
+                    </FormField>
+                    <FormField label="Quiz Title" required>
+                        <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} style={inputStyle} />
+                    </FormField>
+                </div>
+            </div>
+
+            <div style={{ background: "var(--card)", borderRadius: 24, padding: 32, border: "1px solid var(--border)", marginBottom: 24 }}>
+                <h3 style={{ margin: "0 0 24px", color: "var(--text)", fontFamily: "'Calibri', sans-serif" }}>Questions ({questions.length})</h3>
+                {questions.map((q, i) => <QuestionItem key={i} q={q} idx={i} onChange={updateQ} onRemove={removeQ} topics={modules.find(m => m._id === form.moduleId)?.topics || []} />)}
+                <button onClick={() => setQuestions(qs => [...qs, { questionText: "", options: ["", "", "", ""], correctAnswer: 0, topic: "", explanation: "" }])} style={{ width: "100%", padding: "14px", border: "2px dashed var(--border)", borderRadius: 16, background: "transparent", color: "var(--accent)", cursor: "pointer", fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    <Icon d={Icons.plus} size={18} /> Add Another Question
+                </button>
+            </div>
+
+            <button onClick={() => setModal(true)} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: "linear-gradient(135deg, var(--accent), #2563eb)", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 700 }}>
+                Save Changes →
+            </button>
+        </div>
+    );
+};
+ 
+
 
 
  return (
@@ -312,6 +528,7 @@ const QuestionItem = ({ q, idx, onChange, onRemove, topics = [] }) => {
             />
         </div>
     );
+
 
 };
 
@@ -838,9 +1055,6 @@ const ManageExams = ({ toast, modules }) => {
     );
 };
 
-// -------------------- Use inside LecturerDashboard main --------------------
-// Put these inside your LecturerDashboard return main section:
-//
-// {page === "exam" && <AddExamQuiz toast={toast} modules={modules} />}
-// {page === "manage" && <ManageExams toast={toast} modules={modules} />}
->>>>>>> origin/feature/exam-management
+
+}
+
