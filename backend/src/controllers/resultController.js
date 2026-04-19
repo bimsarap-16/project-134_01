@@ -64,6 +64,7 @@ const getAllResults = async (req, res, next) => {
     } catch (error) {
         next(error);
     }
+
 };
 
 const Question = require('../models/Question');
@@ -184,4 +185,85 @@ const getExamReport = async (req, res, next) => {
     } catch (error) {
         next(error);
     }
+};
+const Quiz = require('../models/Quiz');
+
+/**
+ * @desc Public exam report
+ */
+const getPublicExamReport = async (req, res, next) => {
+    try {
+        const { quizId } = req.params;
+
+        const quiz = await Quiz.findById(quizId).populate('moduleId', 'moduleName');
+        if (!quiz) return sendError(res, 'Quiz not found.', 404);
+
+        if (quiz.quizType !== 'exam') {
+            return sendError(res, 'Reports are only for exams.', 400);
+        }
+
+        if (new Date() < new Date(quiz.scheduledEnd)) {
+            return sendError(res, 'Report available after exam ends.', 403);
+        }
+
+        const attempts = await Attempt.find({ quizId, isCompleted: true })
+            .populate('studentId', 'name')
+            .lean();
+
+        const results = attempts.map(a => ({
+            studentName: a.studentId?.name || 'Unknown',
+            score: a.score,
+            totalMarks: a.totalMarks,
+            percentage: a.totalMarks
+                ? (a.score / a.totalMarks) * 100
+                : 0,
+            submittedAt: a.submittedAt
+        }));
+
+        return sendSuccess(res, {
+            quizTitle: quiz.title,
+            moduleName: quiz.moduleId?.moduleName,
+            results
+        }, 'Public report fetched successfully.');
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * @desc Student attempt history
+ */
+const getQuizAttemptHistory = async (req, res, next) => {
+    try {
+        const attempts = await Attempt.find({
+            quizId: req.params.quizId,
+            studentId: req.user._id,
+            isCompleted: true
+        })
+            .sort({ createdAt: 1 })
+            .lean();
+
+        const history = attempts.map((a, i) => ({
+            attemptNumber: i + 1,
+            score: a.score,
+            totalMarks: a.totalMarks,
+            percentage: a.totalMarks
+                ? (a.score / a.totalMarks) * 100
+                : 0,
+            date: a.createdAt
+        }));
+
+        return sendSuccess(res, history, 'Attempt history fetched successfully.');
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = {
+    getResultsByQuiz,
+    getStudentResults,
+    getAllResults,
+    getExamReport,
+    getPublicExamReport,
+    getQuizAttemptHistory
 };
