@@ -65,6 +65,7 @@ const getAllResults = async (req, res, next) => {
         next(error);
     }
 };
+
 const Question = require('../models/Question');
 
 /**
@@ -184,4 +185,3 @@ const getExamReport = async (req, res, next) => {
         next(error);
     }
 };
-
