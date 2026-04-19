@@ -8,14 +8,8 @@ const errorHandler = require('./src/middleware/errorHandler');
 // ─── Route imports ────────────────────────────────────────────────────────────
 const authRoutes = require('./src/routes/authRoutes');
 const userRoutes = require('./src/routes/userRoutes');
-
-
-
-
-
-
-
-
+const quizRoutes = require('./src/routes/quizRoutes');
+const announcementRoutes = require('./src/routes/announcementRoutes');
 
 // ─── Connect to Database ──────────────────────────────────────────────────────
 connectDB();
@@ -55,6 +49,8 @@ app.get('/api/health', (req, res, next) => {
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/quizzes', quizRoutes);
+app.use('/api/announcements', announcementRoutes);
 
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────────
