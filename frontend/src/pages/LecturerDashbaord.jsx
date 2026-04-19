@@ -229,10 +229,347 @@ return (
             </div>
 );
 ////results my part
+    const ResultsAnalysis = ({ results, modules }) => {
+    const [search, setSearch] = useState("");
+    const [moduleFilter, setModuleFilter] = useState("");
+
     const filtered = (results || []).filter(r =>
         (!moduleFilter || r?.quizId?.moduleId?._id === moduleFilter) &&
         (!search || (r?.studentId?.name || "").toLowerCase().includes(search.toLowerCase()))
     );
+
+    return (
+        <div>
+            <h1 style={{ margin: "0 0 8px", fontSize: 28, fontWeight: 800, color: "var(--text)", fontFamily: "'Calibri', sans-serif" }}>Results Analysis</h1>
+            <p style={{ margin: "0 0 28px", color: "var(--text-muted)", fontSize: 14 }}>Analyze student performance across modules and quizzes.</p>
+
+            <div style={{ background: "var(--card)", borderRadius: 24, padding: 28, border: "1px solid var(--border)" }}>
+                <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search student..." style={{ ...inputStyle, flex: 1 }} />
+                    <select value={moduleFilter} onChange={e => setModuleFilter(e.target.value)} style={{ ...selectStyle, flex: 1 }}>
+                        <option value="">All Modules</option>
+                        {modules.map(m => <option key={m._id} value={m._id}>{m.moduleCode}</option>)}
+                    </select>
+                </div>
+
+                <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+                        <thead>
+                            <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                                {["Student", "Module", "Quiz", "Score", "%", "Status"].map(h => (
+                                    <th key={h} style={{ textAlign: "left", padding: "10px 14px", fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>{h}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filtered.map((r, i) => {
+                                const pct = Math.round((r.score / r.totalMarks) * 100);
+                                return (
+                                    <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
+                                        <td style={{ padding: "12px 14px", color: "var(--text)", fontWeight: 600 }}>{r.studentId?.name}</td>
+                                        <td style={{ padding: "12px 14px", color: "var(--text-muted)" }}>{r.quizId?.moduleId?.moduleCode}</td>
+                                        <td style={{ padding: "12px 14px", color: "var(--text-muted)" }}>{r.quizId?.title}</td>
+                                        <td style={{ padding: "12px 14px", color: "var(--text)" }}>{r.score}/{r.totalMarks}</td>
+                                        <td style={{ padding: "12px 14px", fontWeight: 700, color: pct >= 50 ? "#34d399" : "#f87171" }}>{pct}%</td>
+                                        <td style={{ padding: "12px 14px" }}>
+                                            <span style={{ padding: "4px 10px", borderRadius: 20, fontSize: 11, background: r.autoSubmitted ? "#fbbf2422" : "#34d39922", color: r.autoSubmitted ? "#fbbf24" : "#34d399" }}>
+                                                {r.autoSubmitted ? "Auto" : "Normal"}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                )
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ─── Manage Tickets ───────────────────────────────────────────────────────────
+const ManageTickets = ({ toast }) => {
+    const [tickets, setTickets] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [responseTexts, setResponseTexts] = useState({});
+    const [submitting, setSubmitting] = useState(null);
+
+    const fetchTickets = async () => {
+        setLoading(true);
+        try {
+            const res = await ticketAPI.getForLecturer();
+            setTickets(res.data.data);
+        } catch (e) {
+            toast("Failed to load tickets", "error");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResponse = async (id) => {
+        if (!responseTexts[id]) return toast("Response cannot be empty", "error");
+        setSubmitting(id);
+        try {
+            await ticketAPI.respond(id, { response: responseTexts[id] });
+            toast("Response sent & ticket resolved!", "success");
+            fetchTickets();
+        } catch (e) {
+            toast("Failed to send response", "error");
+        } finally {
+            setSubmitting(null);
+        }
+    };
+
+    useEffect(() => {
+        fetchTickets();
+    }, []);
+
+    if (loading) return <p style={{ color: "var(--text-muted)", padding: 32 }}>Loading tickets...</p>;
+
+    return (
+        <div>
+            <h1 style={{ margin: "0 0 8px", fontSize: 28, fontWeight: 800, color: "var(--text)", fontFamily: "'Calibri', sans-serif" }}>Student Tickets</h1>
+            <p style={{ margin: "0 0 28px", color: "var(--text-muted)", fontSize: 14 }}>View tickets and issues raised directly to you from students.</p>
+            {tickets.length === 0 ? (
+                <div style={{ background: "var(--card)", padding: 32, borderRadius: 24, textAlign: "center", border: "1px solid var(--border)" }}>
+                    <p style={{ color: "var(--text-muted)", fontSize: 15 }}>No tickets assigned to you yet.</p>
+                </div>
+            ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    {tickets.map(t => (
+                        <div key={t._id} style={{ background: "var(--card)", padding: 24, borderRadius: 16, border: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 8 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                <h3 style={{ margin: 0, fontSize: 18, color: "var(--text)" }}>{t.title}</h3>
+                                <span style={{ padding: "4px 10px", borderRadius: 20, fontSize: 11, background: t.status === "open" ? "#3b82f622" : "#10b98122", color: t.status === "open" ? "#3b82f6" : "#10b981", fontWeight: 700, textTransform: "uppercase" }}>{t.status}</span>
+                            </div>
+                            <p style={{ margin: 0, fontSize: 14, color: "var(--text-muted)", whiteSpace: "pre-wrap" }}>{t.description}</p>
+                            <div style={{ display: "flex", gap: 16, alignItems: "center", marginTop: 8, fontSize: 13, color: "var(--text-muted)" }}>
+                                <span>From: <strong style={{ color: "var(--text)" }}>{t.studentId?.name}</strong></span>
+                                <span>|</span>
+                                <span>{new Date(t.createdAt).toLocaleString()}</span>
+                            </div>
+                            {t.fileUrl && (
+                                <div style={{ marginTop: 8 }}>
+                                    <a href={`http://localhost:5000${t.fileUrl}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "var(--accent)", textDecoration: "none", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                        📎 View Attachment ({t.fileName})
+                                    </a>
+                                </div>
+                            )}
+
+                            {t.status === "open" ? (
+                                <div style={{ marginTop: 16, borderTop: "1px solid var(--border)", paddingTop: 16 }}>
+                                    <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 800, color: "var(--text-muted)", letterSpacing: "0.05em" }}>SUBMIT RESPONSE</p>
+                                    <textarea
+                                        value={responseTexts[t._id] || ""}
+                                        onChange={e => setResponseTexts({ ...responseTexts, [t._id]: e.target.value })}
+                                        placeholder="Type your response here to help the student..."
+                                        style={{ width: "100%", minHeight: 120, padding: "14px 18px", borderRadius: 14, background: "var(--card-nested)", border: "1px solid var(--border)", borderLeft: `4px solid ${accent}`, color: "var(--text)", fontSize: 14, outline: "none", resize: "vertical", fontFamily: "'Calibri', sans-serif" }}
+                                    />
+                                    <button
+                                        onClick={() => handleResponse(t._id)}
+                                        disabled={submitting === t._id}
+                                        style={{ marginTop: 12, width: "100%", padding: "12px", borderRadius: 12, background: accent, border: "none", color: "#fff", fontWeight: 700, fontSize: 14, cursor: (submitting === t._id) ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "0.2s" }}
+                                    >
+                                        <Icon d={Icons.send} size={16} stroke="#fff" />
+                                        {submitting === t._id ? "Sending..." : "Send Response & Resolve"}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div style={{ marginTop: 16, padding: "20px", background: "var(--glass)", borderRadius: 24, border: "1px solid var(--glassBorder)", backdropFilter: "blur(24px) saturate(180%)", boxShadow: "0 8px 32px rgba(0,0,0,0.03)", animation: "fadeIn 0.3s ease" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                                        <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "#10b981", display: "flex", alignItems: "center", gap: 8 }}>
+                                            <Icon d={Icons.check} size={14} stroke="#10b981" /> THE RESPONSE
+                                        </p>
+                                        <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>Resolved on {new Date(t.respondedAt).toLocaleDateString()}</span>
+                                    </div>
+                                    <p style={{ margin: 0, fontSize: 14, color: "var(--text)", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{t.response}</p>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+
+// ─── Exam Reports ─────────────────────────────────────────────────────────────
+const ExamReports = ({ modules, toast }) => {
+    const [selectedModule, setSelectedModule] = useState("");
+    const [quizzes, setQuizzes] = useState([]);
+    const [selectedQuiz, setSelectedQuiz] = useState("");
+    const [report, setReport] = useState(null);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (!selectedModule) return;
+        const fetchQuizzes = async () => {
+            try {
+                const res = await quizAPI.getByModule(selectedModule);
+                const modQuizzes = res.data?.data?.data || res.data?.data || [];
+                setQuizzes(modQuizzes.filter(q => q.quizType === 'exam'));
+            } catch (e) {
+                toast("Failed to load quizzes", "error");
+            }
+        };
+        fetchQuizzes();
+        setSelectedQuiz("");
+        setReport(null);
+    }, [selectedModule]);
+
+    useEffect(() => {
+        if (!selectedQuiz) return;
+        const fetchReport = async () => {
+            setLoading(true);
+            try {
+                const res = await resultAPI.getReport(selectedQuiz);
+                setReport(res.data?.data);
+            } catch (e) {
+                toast("Failed to load report", "error");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchReport();
+    }, [selectedQuiz]);
+
+    return (
+        <div>
+            <h1 style={{ margin: "0 0 8px", fontSize: 28, fontWeight: 800, color: "var(--text)", fontFamily: "'Calibri', sans-serif" }}>Real Exam Reports</h1>
+            <p style={{ margin: "0 0 28px", color: "var(--text-muted)", fontSize: 14 }}>View detailed module-wise reports and student rankings for real exams.</p>
+
+            <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+                <select value={selectedModule} onChange={e => setSelectedModule(e.target.value)} style={{ ...selectStyle, flex: 1 }}>
+                    <option value="">-- Select Module --</option>
+                    {modules.map(m => <option key={m._id} value={m._id}>{m.moduleCode} - {m.moduleName}</option>)}
+                </select>
+                <select value={selectedQuiz} onChange={e => setSelectedQuiz(e.target.value)} disabled={!selectedModule} style={{ ...selectStyle, flex: 1 }}>
+                    <option value="">-- Select Exam --</option>
+                    {quizzes.map(q => <option key={q._id} value={q._id}>{q.title}</option>)}
+                </select>
+            </div>
+
+            {loading && <p style={{ color: "var(--text-muted)" }}>Loading report data...</p>}
+
+            {!loading && report && !report.attempts?.length && (
+                <div style={{ background: "var(--card)", padding: 32, borderRadius: 24, textAlign: "center", border: "1px solid var(--border)" }}>
+                    <p style={{ color: "var(--text-muted)", fontSize: 15 }}>No attempts found for this exam yet.</p>
+                </div>
+            )}
+
+            {!loading && report && report.attempts?.length > 0 && (
+                <>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 20, marginBottom: 24 }}>
+                        <StatCard label="Total Attempts" value={report.aggregate.totalAttempts} icon="users" color="#60a5fa" />
+                        <StatCard label="Pass Rate" value={`${report.aggregate.passRate}%`} icon="check" color="#34d399" />
+                        <StatCard label="Fail Rate" value={`${report.aggregate.failRate}%`} icon="x" color="#f87171" />
+                    </div>
+
+                    <div style={{ padding: "24px 28px", background: "var(--glass)", borderRadius: 24, border: "1px solid var(--glassBorder)", backdropFilter: "blur(24px) saturate(180%)", marginBottom: 24 }}>
+                        <p style={{ margin: "0 0 20px", fontSize: 14, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Grade Distribution</p>
+                        <div style={{ display: "flex", gap: 10, alignItems: "flex-end", height: 120 }}>
+                            {Object.entries(report.aggregate.gradeDistribution).map(([grade, count], i) => {
+                                const max = Math.max(...Object.values(report.aggregate.gradeDistribution)) || 1;
+                                const heightPct = (count / max) * 100;
+                                const color = ["#10b981", "#34d399", "#6ee7b7", "#3b82f6", "#60a5fa", "#93c5fd", "#f59e0b", "#fbbf24", "#ef4444"][i];
+                                return (
+                                    <div key={grade} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                                        <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 700 }}>{count}</span>
+                                        <div style={{ width: "100%", background: color, borderRadius: "6px 6px 0 0", height: `${heightPct}%`, minHeight: count > 0 ? 6 : 0, transition: "height 0.8s ease" }} />
+                                        <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600 }}>{grade}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div style={{ background: "var(--card)", borderRadius: 24, padding: 28, border: "1px solid var(--border)", overflowX: "auto" }}>
+                        <h3 style={{ margin: "0 0 20px", color: "var(--text)", fontFamily: "'Calibri', sans-serif" }}>Student Ranking based on Marks</h3>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+                            <thead>
+                                <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                                    {["Rank", "Student", "Answered", "Correct", "Wrong", "Score", "%", "Grade", "Status"].map(h => (
+                                        <th key={h} style={{ textAlign: "left", padding: "10px 14px", fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>{h}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {report.attempts.map((att, i) => (
+                                    <tr key={att.attemptId} style={{ borderBottom: "1px solid var(--border)" }}>
+                                        <td style={{ padding: "12px 14px", fontWeight: 800, color: att.rank === 1 ? "#fbbf24" : att.rank === 2 ? "#94a3b8" : att.rank === 3 ? "#b45309" : "var(--text-muted)" }}>
+                                            #{att.rank}
+                                        </td>
+                                        <td style={{ padding: "12px 14px", color: "var(--text)", fontWeight: 600 }}>{att.studentId?.name || "Unknown"}</td>
+                                        <td style={{ padding: "12px 14px", color: "var(--text-muted)" }}>{att.answeredCount}/{att.totalQuestions}</td>
+                                        <td style={{ padding: "12px 14px", color: "#34d399", fontWeight: 600 }}>{att.correctCount} ({att.answeredCount ? Math.round((att.correctCount / att.answeredCount) * 100) : 0}%)</td>
+                                        <td style={{ padding: "12px 14px", color: "#f87171", fontWeight: 600 }}>{att.wrongCount} ({att.answeredCount ? Math.round((att.wrongCount / att.answeredCount) * 100) : 0}%)</td>
+                                        <td style={{ padding: "12px 14px", color: "var(--text)", fontWeight: 700 }}>{att.score}/{att.totalMarks}</td>
+                                        <td style={{ padding: "12px 14px", fontWeight: 700, color: "var(--text)" }}>{att.percentage}%</td>
+                                        <td style={{ padding: "12px 14px", fontWeight: 800, color: att.isPass ? "#10b981" : "#ef4444" }}>{att.grade}</td>
+                                        <td style={{ padding: "12px 14px" }}>
+                                            <span style={{ padding: "4px 10px", borderRadius: 20, fontSize: 11, background: att.isPass ? "#34d39922" : "#f8717122", color: att.isPass ? "#34d399" : "#f87171", fontWeight: 700 }}>
+                                                {att.isPass ? "PASS" : "FAIL"}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {report.aggregate.topicStats && report.aggregate.topicStats.length > 0 && (
+                        <div style={{ background: "var(--card)", borderRadius: 24, padding: 32, border: "1px solid var(--border)", marginTop: 24 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+                                <h3 style={{ margin: 0, color: "var(--text)", fontSize: 20, fontWeight: 800, fontFamily: "'Calibri', sans-serif" }}>Lecture Topic Analysis</h3>
+                                <div style={{ fontSize: 12, background: "var(--border)", color: "var(--text-muted)", padding: "4px 12px", borderRadius: 20, fontWeight: 700 }}>{report.aggregate.topicStats.length} TOPICS COVERED</div>
+                            </div>
+                            
+                            <div style={{ display: "flex", gap: 40, alignItems: "center", flexWrap: "wrap", justifyContent: "center", padding: "20px 0" }}>
+                                <MultiSlicePieChart 
+                                    data={report.aggregate.topicStats.map((ts, i) => ({
+                                        label: ts.topic,
+                                        value: ts.correctAnswers,
+                                        color: ["#3b82f6", "#0ea5e9", "#14b8a6", "#2dd4bf", "#60a5fa", "#06b6d4", "#0891b2"][i % 7]
+                                    }))} 
+                                    size={180} 
+                                />
+
+                                <div style={{ flex: 1, minWidth: 300 }}>
+                                    <div style={{ display: "grid", gap: 12 }}>
+                                        {report.aggregate.topicStats.map((ts, i) => {
+                                            const color = ["#3b82f6", "#0ea5e9", "#14b8a6", "#2dd4bf", "#60a5fa", "#06b6d4", "#0891b2"][i % 7];
+                                            return (
+                                                <div key={i} style={{ display: "flex", alignItems: "center", gap: 16, padding: "12px 16px", background: "var(--card-nested)", borderRadius: 12, border: "1px solid var(--border)" }}>
+                                                    <div style={{ width: 12, height: 12, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                            <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>{ts.topic}</span>
+                                                            <span style={{ fontSize: 13, fontWeight: 800, color }}>{ts.percentage}% Success</span>
+                                                        </div>
+                                                        <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+                                                            <span>Questions: {ts.totalQuestions}</span>
+                                                            <span>•</span>
+                                                            <span>Correct: {ts.correctAnswers}</span>
+                                                            <span>•</span>
+                                                            <span>Attempts: {ts.totalAttempts}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+
+                </>
+            )}
+        </div>
+    );
+};
 
 ///end results analysis
 const AddPracticeQuiz = ({ toast, modules }) => {
