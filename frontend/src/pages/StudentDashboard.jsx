@@ -1,3 +1,267 @@
+import { useState, useEffect, useRef } from "react";
+import { moduleAPI, quizAPI, questionAPI, attemptAPI, resultAPI, chatbotAPI, announcementAPI, userAPI, ticketAPI } from "../services/api";
+import { useAuth } from "../context/AuthContext";
+import Chatbot from "../components/Chatbot";
+
+const renderDashboard = () => (
+    <div style={{ padding: "40px 40px 100px" }}>
+        <div style={{ marginBottom: 36, animation: "fadeIn 0.6s ease both" }}>
+            <div
+                style={{
+                    fontSize: 12,
+                    color: colors.accent,
+                    fontWeight: 800,
+                    letterSpacing: 2,
+                    textTransform: "uppercase",
+                    marginBottom: 10
+                }}
+            >
+                Welcome Back, {user?.name}
+            </div>
+
+            <h1
+                style={{
+                    fontSize: 26,
+                    fontWeight: 900,
+                    margin: 0,
+                    background: `linear-gradient(135deg, ${colors.text}, ${colors.textMid})`,
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent"
+                }}
+            >
+                Your Learning Journey
+            </h1>
+
+            <p
+                style={{
+                    color: colors.textMid,
+                    marginTop: 6,
+                    fontSize: 14.5,
+                    maxWidth: 540,
+                    lineHeight: 1.5
+                }}
+            >
+                Track your progress, practice concepts, and excel in your exams with AI-powered insights.
+            </p>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 44 }}>
+            {[
+                {
+                    id: "practiceList",
+                    title: "Practice Quizzes",
+                    text: "Sharpen your skills with un-timed practice sessions and instant feedback.",
+                    icon: "practice",
+                    color: "#3b82f6"
+                },
+                {
+                    id: "examList",
+                    title: "Real Quizzes",
+                    text: "Take officially scheduled exams and earn your grades in a secure environment.",
+                    icon: "trophy",
+                    color: "#2563eb"
+                }
+            ].map((card, idx) => (
+                <div
+                    key={card.id}
+                    onClick={() => navigateTo(card.id)}
+                    style={{
+                        position: "relative",
+                        background: colors.glass,
+                        border: `1px solid ${colors.glassBorder}`,
+                        borderRadius: 28,
+                        padding: "36px 30px",
+                        color: colors.text,
+                        cursor: "pointer",
+                        transition: "all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                        backdropFilter: "blur(32px) saturate(180%)",
+                        overflow: "hidden",
+                        animation: `fadeIn 0.6s ease both ${idx * 0.1}s`
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = "translateY(-10px) scale(1.01)";
+                        e.currentTarget.style.boxShadow = `0 32px 64px ${card.color}20`;
+                        e.currentTarget.style.background = dark
+                            ? "rgba(255,255,255,0.05)"
+                            : "rgba(255,255,255,0.6)";
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = "translateY(0) scale(1)";
+                        e.currentTarget.style.boxShadow = "0 10px 30px rgba(0,0,0,0.02)";
+                        e.currentTarget.style.background = colors.glass;
+                    }}
+                >
+                    <div
+                        style={{
+                            position: "absolute",
+                            top: -30,
+                            right: -30,
+                            width: 110,
+                            height: 110,
+                            borderRadius: "50%",
+                            background: card.color,
+                            opacity: 0.15,
+                            filter: "blur(32px)"
+                        }}
+                    />
+                    <div
+                        style={{
+                            background: `linear-gradient(135deg, ${card.color}, ${card.color}dd)`,
+                            width: 52,
+                            height: 52,
+                            borderRadius: 16,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            marginBottom: 20,
+                            boxShadow: `0 10px 24px ${card.color}30`,
+                            color: "#fff"
+                        }}
+                    >
+                        <Icon name={card.icon} size={26} />
+                    </div>
+
+                    <h3 style={{ fontSize: 20, fontWeight: 800, margin: "0 0 8px", color: colors.text }}>
+                        {card.title}
+                    </h3>
+
+                    <p style={{ fontSize: 13.5, color: colors.textMid, lineHeight: 1.5, margin: 0 }}>
+                        {card.text}
+                    </p>
+                </div>
+            ))}
+        </div>
+
+        {/* Recent Announcements */}
+        <div style={{ animation: "fadeIn 0.6s ease both 0.2s" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+                <div
+                    style={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: 12,
+                        background: "rgba(245,158,11,0.15)",
+                        color: "#f59e0b",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: "0 4px 12px rgba(245,158,11,0.2)"
+                    }}
+                >
+                    <Icon name="bell" size={20} />
+                </div>
+
+                <h3
+                    style={{
+                        margin: 0,
+                        fontSize: 19,
+                        fontWeight: 800,
+                        color: colors.text
+                    }}
+                >
+                    Recent Announcements
+                </h3>
+            </div>
+
+            <div style={{ display: "grid", gap: 12 }}>
+                {announcements.length === 0 ? (
+                    <div
+                        style={{
+                            padding: "48px 24px",
+                            textAlign: "center",
+                            background: colors.glass,
+                            borderRadius: 24,
+                            border: `1px solid ${colors.glassBorder}`,
+                            borderStyle: "dashed"
+                        }}
+                    >
+                        <p style={{ margin: 0, color: colors.textMid, fontSize: 14 }}>
+                            No recent announcements yet.
+                        </p>
+                    </div>
+                ) : (
+                    announcements.slice(0, 3).map((a) => (
+                        <div
+                            key={a._id}
+                            style={{
+                                background: colors.glass,
+                                padding: "20px 24px",
+                                borderRadius: 20,
+                                border: `1px solid ${colors.glassBorder}`,
+                                backdropFilter: "blur(24px) saturate(180%)",
+                                transition: "all 0.3s ease",
+                                position: "relative",
+                                overflow: "hidden"
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = dark
+                                    ? "rgba(255,255,255,0.05)"
+                                    : "rgba(255,255,255,0.6)";
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = colors.glass;
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "flex-start",
+                                    marginBottom: 8
+                                }}
+                            >
+                                <div>
+                                    <h4
+                                        style={{
+                                            margin: "0 0 4px",
+                                            fontSize: 15.5,
+                                            fontWeight: 700,
+                                            color: colors.text
+                                        }}
+                                    >
+                                        {a.title}
+                                    </h4>
+
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            gap: 12,
+                                            fontSize: 12,
+                                            color: colors.textMid,
+                                            fontWeight: 500,
+                                            flexWrap: "wrap"
+                                        }}
+                                    >
+                                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                            <Icon name="clock" size={14} />
+                                            {new Date(a.createdAt).toLocaleDateString()}
+                                        </span>
+
+                                        <span style={{ color: colors.accent, fontWeight: 700 }}>
+                                            {a.moduleId?.moduleName || "General Announcement"}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p
+                                style={{
+                                    margin: 0,
+                                    fontSize: 13.5,
+                                    color: colors.textMid,
+                                    lineHeight: 1.55
+                                }}
+                            >
+                                {a.description}
+                            </p>
+                        </div>
+                    ))
+                )}
+            </div>
+        </div>
+    </div>
+);
+
 const renderPractice = () => {
     if (!selectedQuiz || questions.length === 0) {
         return (
