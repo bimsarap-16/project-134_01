@@ -1,5 +1,97 @@
 import { useState, useEffect } from "react";
 import { quizAPI, questionAPI } from "../services/api";
+// ─── Mini Bar Chart ───────────────────────────────────────────────────────────
+const BarChart = ({ data, label }) => {
+    const max = Math.max(...(data.length ? data.map(d => d.v) : [1]));
+    return (
+        <div style={{ padding: "24px 28px", background: "var(--glass)", borderRadius: 24, border: "1px solid var(--glassBorder)", backdropFilter: "blur(24px) saturate(180%)", boxShadow: "0 8px 32px rgba(0,0,0,0.02)" }}>
+            <p style={{ margin: "0 0 20px", fontSize: 14, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</p>
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-end", height: 120 }}>
+                {data.map((d, i) => (
+                    <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                        <div style={{ width: "100%", background: `linear-gradient(180deg, ${d.c}, ${d.c}88)`, borderRadius: "6px 6px 0 0", height: `${(d.v / max) * 100}%`, minHeight: 4, transition: "height 0.8s ease" }} />
+                        <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600 }}>{d.l}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+// ─── Score Distribution ───────────────────────────────────────────────────────
+const ScoreDistChart = ({ results }) => {
+    const ranges = [
+        { label: "0–40", color: "#f87171" },
+        { label: "41–60", color: "#fb923c" },
+        { label: "61–75", color: "#fbbf24" },
+        { label: "76–90", color: "#34d399" },
+        { label: "91–100", color: "#60a5fa" },
+    ];
+    const counts = ranges.map((r, i) => {
+        const [lo, hi] = r.label.split("–").map(Number);
+        return results.filter(s => {
+            const pct = (s.score / s.totalMarks) * 100;
+            return pct >= lo && pct <= hi;
+        }).length;
+    });
+    const max = Math.max(...counts) || 1;
+    return (
+        <div style={{ padding: "24px 28px", background: "var(--glass)", borderRadius: 24, border: "1px solid var(--glassBorder)", backdropFilter: "blur(24px) saturate(180%)" }}>
+            <p style={{ margin: "0 0 20px", fontSize: 14, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Score Distribution</p>
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-end", height: 100 }}>
+                {ranges.map((r, i) => (
+                    <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 700 }}>{counts[i]}</span>
+                        <div style={{ width: "100%", background: r.color, borderRadius: "6px 6px 0 0", height: `${(counts[i] / max) * 80}px`, minHeight: counts[i] > 0 ? 6 : 0, transition: "height 0.8s ease" }} />
+                        <span style={{ fontSize: 9, color: "var(--text-muted)", fontWeight: 600 }}>{r.label}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+// ─── Pie Chart Component ─────────────────────────────────────────────────────
+const PieChart = ({ percentage, color, size = 50 }) => {
+    const radius = 22;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (percentage / 100) * circumference;
+    return (
+        <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+            <svg width={size} height={size} viewBox="0 0 60 60" style={{ transform: "rotate(-90deg)" }}>
+                <circle cx="30" cy="30" r={radius} fill="none" stroke="var(--border)" strokeWidth="8" />
+                <circle cx="30" cy="30" r={radius} fill="none" stroke={color} strokeWidth="8"
+                    strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" style={{ transition: "stroke-dashoffset 0.8s ease" }} />
+            </svg>
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "var(--text)" }}>
+                {Math.round(percentage)}%
+            </div>
+        </div>
+    );
+};
+
+const MultiSlicePieChart = ({ data, size = 160 }) => {
+    const total = data.reduce((sum, d) => sum + d.value, 0);
+    if (total === 0) return <div style={{ width: size, height: size, borderRadius: "50%", background: "var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "var(--text-muted)" }}>No Data</div>;
+
+    let current = 0;
+    const slices = data.map((d) => {
+        const start = current;
+        const width = (d.value / total) * 100;
+        current += width;
+        return `${d.color} ${start}% ${current}%`;
+    }).join(", ");
+
+    return (
+        <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+            <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: `conic-gradient(${slices})`, transform: "rotate(-90deg)", boxShadow: "0 4px 16px rgba(0,0,0,0.1)" }} />
+            <div style={{ position: "absolute", inset: "25%", background: "var(--card)", borderRadius: "50%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", boxShadow: "inset 0 2px 8px rgba(0,0,0,0.05)" }}>
+                <span style={{ fontSize: 20, fontWeight: 800, color: "var(--text)" }}>{total}</span>
+                <span style={{ fontSize: 8, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Total Correct</span>
+            </div>
+        </div>
+    );
+};
 
 // -------------------- Helpers --------------------
 const newQuestion = () => ({
