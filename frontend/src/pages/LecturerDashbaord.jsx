@@ -27,10 +27,10 @@ const selectStyle = {
     cursor: "pointer",
 };
 
-<<<<<<< Updated upstream
 
-=======
->>>>>>> Stashed changes
+
+
+
 const FormField = ({ label, children, required }) => (
     <div style={{ marginBottom: 20 }}>
         <label
@@ -51,7 +51,7 @@ const FormField = ({ label, children, required }) => (
     </div>
 );
 
-<<<<<<< Updated upstream
+
 const AddPracticeQuiz = ({ toast, modules }) => {
     const [form, setForm] = useState({ moduleId: "", title: "", duration: "" });
     const [questions, setQuestions] = useState([newQuestion()]);
@@ -288,8 +288,7 @@ const EditPracticeQuiz = ({ quiz, modules, onBack, toast }) => {
 
 
 
-=======
->>>>>>> Stashed changes
+
 const QuestionItem = ({ q, idx, onChange, onRemove, topics = [] }) => {
     const update = (field, value) => onChange(idx, { ...q, [field]: value });
 
@@ -1281,10 +1280,10 @@ const AddAnnouncement = ({ toast, user }) => {
 // -------------------- Use inside LecturerDashboard main --------------------
 //
 // {page === "exam" && <AddExamQuiz toast={toast} modules={modules} />}
-<<<<<<< Updated upstream
+
 // {page === "manage" && <ManageExams toast={toast} modules={modules} />}
 
 
-=======
+
 // {page === "manage" && <ManageExams toast={toast} modules={modules} />}
->>>>>>> Stashed changes
+
