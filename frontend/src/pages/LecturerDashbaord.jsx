@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { quizAPI, questionAPI } from "../services/api";
-
+import { quizAPI, questionAPI, announcementAPI } from "../services/api";
 // -------------------- Helpers --------------------
 const newQuestion = () => ({
     questionText: "",
@@ -28,7 +27,10 @@ const selectStyle = {
     cursor: "pointer",
 };
 
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
 const FormField = ({ label, children, required }) => (
     <div style={{ marginBottom: 20 }}>
         <label
@@ -49,6 +51,7 @@ const FormField = ({ label, children, required }) => (
     </div>
 );
 
+<<<<<<< Updated upstream
 const AddPracticeQuiz = ({ toast, modules }) => {
     const [form, setForm] = useState({ moduleId: "", title: "", duration: "" });
     const [questions, setQuestions] = useState([newQuestion()]);
@@ -285,6 +288,8 @@ const EditPracticeQuiz = ({ quiz, modules, onBack, toast }) => {
 
 
 
+=======
+>>>>>>> Stashed changes
 const QuestionItem = ({ q, idx, onChange, onRemove, topics = [] }) => {
     const update = (field, value) => onChange(idx, { ...q, [field]: value });
 
@@ -418,7 +423,121 @@ const QuestionItem = ({ q, idx, onChange, onRemove, topics = [] }) => {
             />
         </div>
     );
+};
 
+const ManageTickets = ({ toast }) => {
+    const [tickets, setTickets] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [responseTexts, setResponseTexts] = useState({});
+    const [submitting, setSubmitting] = useState(null);
+
+    const fetchTickets = async () => {
+        setLoading(true);
+        try {
+            const res = await ticketAPI.getForLecturer();
+            setTickets(res.data.data);
+        } catch (e) {
+            toast("Failed to load tickets", "error");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchTickets();
+    }, []);
+
+    const handleResponse = async (id) => {
+        if (!responseTexts[id]) {
+            return toast("Response cannot be empty", "error");
+        }
+
+        setSubmitting(id);
+        try {
+            await ticketAPI.respond(id, { response: responseTexts[id] });
+            toast("Response sent & ticket resolved!", "success");
+            fetchTickets();
+        } catch (e) {
+            toast("Failed to send response", "error");
+        } finally {
+            setSubmitting(null);
+        }
+    };
+
+    if (loading) {
+        return (
+            <p style={{ color: "var(--text-muted)", padding: 32 }}>
+                Loading tickets...
+            </p>
+        );
+    }
+
+    return (
+        <div>
+            <h1 style={{ margin: "0 0 8px", fontSize: 28, fontWeight: 800 }}>
+                Student Tickets
+            </h1>
+
+            <p style={{ margin: "0 0 28px", fontSize: 14 }}>
+                View tickets and issues raised directly to you from students.
+            </p>
+
+            {tickets.length === 0 ? (
+                <div style={{ padding: 32, textAlign: "center" }}>
+                    <p>No tickets assigned to you yet.</p>
+                </div>
+            ) : (
+                tickets.map((t) => (
+                    <div
+                        key={t._id}
+                        style={{ marginBottom: 20, padding: 16, border: "1px solid #ccc" }}
+                    >
+                        <h3>{t.title}</h3>
+                        <p>{t.description}</p>
+
+                        {t.fileUrl && (
+                            <div>
+                                <a
+                                    href={`http://localhost:5000${t.fileUrl}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    📎 View Attachment ({t.fileName})
+                                </a>
+                            </div>
+                        )}
+
+                        {t.status === "open" ? (
+                            <div>
+                                <textarea
+                                    value={responseTexts[t._id] || ""}
+                                    onChange={(e) =>
+                                        setResponseTexts({
+                                            ...responseTexts,
+                                            [t._id]: e.target.value,
+                                        })
+                                    }
+                                    placeholder="Type your response here..."
+                                />
+
+                                <button
+                                    onClick={() => handleResponse(t._id)}
+                                    disabled={submitting === t._id}
+                                >
+                                    {submitting === t._id ? "Sending..." : "Send Response"}
+                                </button>
+                            </div>
+                        ) : (
+                            <div>
+                                <p>Resolved response shown below</p>
+                                <p>{t.response}</p>
+                            </div>
+                        )}
+                    </div>
+                ))
+            )}
+        </div>
+    );
 };
 
 // -------------------- Add Exam --------------------
@@ -431,30 +550,40 @@ const AddExamQuiz = ({ toast, modules }) => {
         scheduledEnd: "",
         attemptsAllowed: 1,
     });
+
     const [questions, setQuestions] = useState([newQuestion()]);
     const [loading, setLoading] = useState(false);
 
-    const updateQ = (i, q) => setQuestions((qs) => qs.map((x, xi) => (xi === i ? q : x)));
-    const removeQ = (i) => setQuestions((qs) => qs.filter((_, xi) => xi !== i));
-    const addQ = () => setQuestions((qs) => [...qs, newQuestion()]);
+    const updateQ = (i, q) =>
+        setQuestions((qs) => qs.map((x, xi) => (xi === i ? q : x)));
+
+    const removeQ = (i) =>
+        setQuestions((qs) => qs.filter((_, xi) => xi !== i));
+
+    const addQ = () =>
+        setQuestions((qs) => [...qs, newQuestion()]);
 
     const validate = () => {
         if (!form.moduleId || !form.title || !form.duration || !form.scheduledStart || !form.scheduledEnd) {
             toast("Please fill all required fields.", "error");
             return false;
         }
+
         if (parseInt(form.duration) <= 0) {
             toast("Duration must be a positive number.", "error");
             return false;
         }
+
         if (new Date(form.scheduledStart) >= new Date(form.scheduledEnd)) {
             toast("Start time must be before end time.", "error");
             return false;
         }
+
         if (questions.some((q) => !q.questionText.trim())) {
             toast("All questions must have text.", "error");
             return false;
         }
+
         return true;
     };
 
@@ -564,6 +693,7 @@ const AddExamQuiz = ({ toast, modules }) => {
                         topics={modules.find((m) => m._id === form.moduleId)?.topics || []}
                     />
                 ))}
+
                 <button
                     type="button"
                     onClick={addQ}
@@ -635,10 +765,13 @@ const EditExamQuiz = ({ quiz, modules, onBack, toast }) => {
                 toast("Failed to load questions", "error");
             }
         };
+
         fetchQs();
     }, [quiz._id, toast]);
 
-    const updateQ = (i, q) => setQuestions((qs) => qs.map((x, xi) => (xi === i ? q : x)));
+    const updateQ = (i, q) =>
+        setQuestions((qs) => qs.map((x, xi) => (xi === i ? q : x)));
+
     const removeQ = (i) => {
         const qToDelete = questions[i];
         if (qToDelete._id) {
@@ -647,25 +780,30 @@ const EditExamQuiz = ({ quiz, modules, onBack, toast }) => {
         setQuestions((qs) => qs.filter((_, xi) => xi !== i));
     };
 
-    const addQ = () => setQuestions((qs) => [...qs, newQuestion()]);
+    const addQ = () =>
+        setQuestions((qs) => [...qs, newQuestion()]);
 
     const validate = () => {
         if (!form.moduleId || !form.title || !form.duration || !form.scheduledStart || !form.scheduledEnd) {
             toast("Please fill all required fields.", "error");
             return false;
         }
+
         if (parseInt(form.duration) <= 0) {
             toast("Duration must be a positive number.", "error");
             return false;
         }
+
         if (new Date(form.scheduledStart) >= new Date(form.scheduledEnd)) {
             toast("Start time must be before end time.", "error");
             return false;
         }
+
         if (questions.some((q) => !q.questionText?.trim())) {
             toast("All questions must have text.", "error");
             return false;
         }
+
         return true;
     };
 
@@ -787,6 +925,7 @@ const EditExamQuiz = ({ quiz, modules, onBack, toast }) => {
                         topics={modules.find((m) => m._id === form.moduleId)?.topics || []}
                     />
                 ))}
+
                 <button
                     type="button"
                     onClick={addQ}
@@ -942,12 +1081,210 @@ const ManageExams = ({ toast, modules }) => {
             )}
         </div>
     );
+    
+};
+const AddAnnouncement = ({ toast, user }) => {
+    const [form, setForm] = useState({
+        title: "",
+        description: "",
+    });
+    const [announcements, setAnnouncements] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    const fetchAnnouncements = async () => {
+        try {
+            const res = await announcementAPI.getForLecturer();
+            const items = res.data?.data || [];
+            setAnnouncements(items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+        } catch (e) {
+            toast("Failed to load announcements", "error");
+        }
+    };
+
+    useEffect(() => {
+        fetchAnnouncements();
+    }, []);
+
+    const validate = () => {
+        if (!form.title.trim() || !form.description.trim()) {
+            toast("Title and description are required.", "error");
+            return false;
+        }
+        return true;
+    };
+
+    const handlePublish = async () => {
+        if (!validate()) return;
+
+        setLoading(true);
+        try {
+            await announcementAPI.create({
+                title: form.title,
+                description: form.description,
+            });
+
+            toast("Announcement published successfully!");
+            setForm({ title: "", description: "" });
+            fetchAnnouncements();
+        } catch (e) {
+            toast(e.response?.data?.message || "Failed to publish announcement", "error");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this announcement?")) return;
+
+        try {
+            await announcementAPI.delete(id);
+            toast("Announcement deleted successfully!");
+            fetchAnnouncements();
+        } catch (e) {
+            toast(e.response?.data?.message || "Failed to delete announcement", "error");
+        }
+    };
+
+    const canDelete = (announcement) => {
+        if (!user) return false;
+        return (announcement.createdBy?._id || announcement.createdBy) === user._id;
+    };
+
+    return (
+        <div style={{ maxWidth: 860 }}>
+            <h1 style={{ margin: "0 0 8px", fontSize: 28, fontWeight: 800, color: "var(--text)", fontFamily: "'Calibri', sans-serif" }}>
+                Add Announcement
+            </h1>
+            <p style={{ margin: "0 0 32px", color: "var(--text-muted)", fontSize: 14 }}>
+                Create a new announcement notice for students.
+            </p>
+
+            <div style={{ background: "var(--card)", borderRadius: 24, padding: 32, border: "1px solid var(--border)", marginBottom: 24 }}>
+                <h3 style={{ margin: "0 0 24px", color: "var(--text)", fontFamily: "'Calibri', sans-serif" }}>
+                    Announcement Details
+                </h3>
+
+                <FormField label="Announcement Title" required>
+                    <input
+                        value={form.title}
+                        onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                        placeholder="e.g. Midterm Information"
+                        style={inputStyle}
+                    />
+                </FormField>
+
+                <FormField label="Description" required>
+                    <textarea
+                        value={form.description}
+                        onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                        placeholder="Enter your announcement here..."
+                        style={{ ...inputStyle, minHeight: 120, resize: "vertical" }}
+                    />
+                </FormField>
+            </div>
+
+            <button
+                onClick={handlePublish}
+                disabled={loading}
+                style={{
+                    width: "100%",
+                    padding: "14px",
+                    borderRadius: 14,
+                    border: "none",
+                    background: "linear-gradient(135deg, var(--accent), #0891b2)",
+                    color: "#fff",
+                    cursor: "pointer",
+                    fontSize: 14,
+                    fontWeight: 700,
+                }}
+            >
+                {loading ? "Publishing..." : "Publish Announcement →"}
+            </button>
+
+            <div style={{ marginTop: 40 }}>
+                <h3 style={{ marginBottom: 20, color: "var(--text)", fontFamily: "'Calibri', sans-serif" }}>
+                    Recent Announcements
+                </h3>
+
+                {announcements.length === 0 ? (
+                    <div
+                        style={{
+                            padding: 24,
+                            borderRadius: 16,
+                            background: "var(--card)",
+                            border: "1px solid var(--border)",
+                            textAlign: "center",
+                            color: "var(--text-muted)",
+                        }}
+                    >
+                        No announcements found.
+                    </div>
+                ) : (
+                    <div style={{ display: "grid", gap: 16 }}>
+                        {announcements.map((a) => (
+                            <div
+                                key={a._id}
+                                style={{
+                                    background: "var(--card)",
+                                    padding: 20,
+                                    borderRadius: 16,
+                                    border: "1px solid var(--border)",
+                                }}
+                            >
+                                <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                                    <div style={{ flex: 1 }}>
+                                        <h4 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 700, color: "var(--text)" }}>
+                                            {a.title}
+                                        </h4>
+                                        <p
+                                            style={{
+                                                margin: "0 0 10px",
+                                                color: "var(--text-muted)",
+                                                lineHeight: 1.6,
+                                                whiteSpace: "pre-wrap",
+                                            }}
+                                        >
+                                            {a.description}
+                                        </p>
+                                        <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
+                                            {new Date(a.createdAt).toLocaleString()}
+                                        </p>
+                                    </div>
+
+                                    {canDelete(a) && (
+                                        <button
+                                            onClick={() => handleDelete(a._id)}
+                                            style={{
+                                                height: "fit-content",
+                                                padding: "8px 12px",
+                                                borderRadius: 10,
+                                                border: "none",
+                                                background: "#dc2626",
+                                                color: "#fff",
+                                                cursor: "pointer",
+                                                fontWeight: 600,
+                                            }}
+                                        >
+                                            Delete
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
 };
 
 // -------------------- Use inside LecturerDashboard main --------------------
-// Put these inside your LecturerDashboard return main section:
 //
 // {page === "exam" && <AddExamQuiz toast={toast} modules={modules} />}
+<<<<<<< Updated upstream
 // {page === "manage" && <ManageExams toast={toast} modules={modules} />}
 
 
+=======
+// {page === "manage" && <ManageExams toast={toast} modules={modules} />}
+>>>>>>> Stashed changes
